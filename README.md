@@ -15,31 +15,13 @@ First, the real time topology of the test case is extracted from the operating f
 
 Once fault is identified in the test case, Isolation.py is invoked which isolates the fault from all possible directions. Then restoration_WSU.py solves the optimization. The output of optimization is the list of switches to toggle for reconfiguration such that load restored is maximixed. Grid-forming DERs can also be utilized to form islands if required. 
 
-## Quick Start
+## Layout
 
-The following procedure will use the already existing containers for the gridappsd sample application.
+Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refered to as gridappsd-docker repository) next to this repository (they should both have the same parent folder)
 
-1. Clone the gridappsd-docker repository
-    ```console
-    git clone https://github.com/GRIDAPPSD/gridappsd-docker
-    cd gridappsd-docker
-    ```
-1. Run the docker containers
-    ```console
-    ./run.sh
-    ```
-1. Once inside the container start gridappsd
-    ```console
-    ./run-gridappsd.sh
-    ```
-    
-1. Open browser to http://localhost:8080 (follow instructions https://gridappsd.readthedocs.io/en/latest/using_gridappsd/index.html to run the application)
-    
+## Creating the restoration application container
 
-
-## Creating the sample-app application container
-
-1.  From the command line execute the following commands to build the sample-app container
+1.  From the command line execute the following commands to build the wsu-restoration container
 
     ```console
     osboxes@osboxes> cd WSU-Restoration
