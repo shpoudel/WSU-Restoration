@@ -31,7 +31,7 @@ class Topology(object):
         ms_id = []
         bus = []
         for d1 in data1['data']: 
-            if d1['type'] == "Pos":
+            if d1['type'] == "VA":
                 ms_id.append(d1['measid'])
 
         # Store the open switches
@@ -39,7 +39,7 @@ class Topology(object):
         opens = []
         for k, v in data2.items():
             if (v['measurement_mrid']) in ms_id:
-                if v['value'] == 0:
+                if v['magnitude'] == 0:
                     opens.append(v['measurement_mrid'])
 
         Loadbreak = []

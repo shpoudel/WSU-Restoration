@@ -35,8 +35,6 @@ class OpenSw(object):
         for l in self.LineSW:
             G.add_edge(l['from_br'], l['to_br'])
         
-        # print("\n Number of Nodes:", G.number_of_nodes(), "\n", "Number of Edges:", G.number_of_edges())
-
         Source = 'SOURCEBUS'
         Fault = self.fault 
         print(" \n Now isolating the fault.... \n ")

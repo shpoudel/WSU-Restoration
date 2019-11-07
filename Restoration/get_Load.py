@@ -23,19 +23,16 @@ class PowerData(object):
         data2 = data2['message']['measurements']     
 
         # Find interested mrids of 9500 Node. We are only interested in VA of the nodes
+        # Convert VA to kw and kVAR
         Demand = []
         s = 0.
-        count = 0
         for d1 in data1['data']: 
             if d1['type'] == 'VA':                
                 for n, pq in data2.items():
                     if n == d1['measid']:
                         # Check phase of load in 9500 node based on last letter
                         loadbus = d1['bus']
-                        # print(pq['magnitude'], pq['angle'])
-                        count += 1
                         phase = loadbus[-1].upper()
-                        # print(pq['angle'])
                         phi = (pq['angle'])*math.pi/180
                         message = dict(bus = d1['bus'],
                                        VA = [pq['magnitude'], pq['angle']],
@@ -46,6 +43,13 @@ class PowerData(object):
                         break  
         for d in Demand:
             s += d['kW']
+        print('Total demand:', s)
+
+        with open('PlatformD.json', 'w') as json_file:
+            json.dump(Demand, json_file)
+
+        # Transferring the load to Primary side for solving the restoration. No triplex line in optimization model
+
 
     
         

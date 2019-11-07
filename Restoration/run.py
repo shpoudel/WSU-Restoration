@@ -61,11 +61,6 @@ from gridappsd.topics import simulation_input_topic, simulation_output_topic, si
 
 DEFAULT_MESSAGE_PERIOD = 5
 message_period = 3
-
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
-#                     format="%(asctime)s - %(name)s;%(levelname)s|%(message)s",
-#                     datefmt="%Y-%m-%d %H:%M:%S")
-# Only log errors to the stomp logger.
 logging.getLogger('stomp.py').setLevel(logging.ERROR)
 
 _log = logging.getLogger(__name__)
@@ -76,12 +71,12 @@ class SwitchingActions(object):
 
     The object should be used as a callback from a GridAPPSD object so that the
     on_message function will get called each time a message from the simulator.  During
-    the execution of on_meessage the `CapacitorToggler` object will publish a
+    the execution of on_meessage the `SwitchingActions` object will publish a
     message to the simulation_input_topic with the forward and reverse difference specified.
     """
 
     def __init__(self, simulation_id, gridappsd_obj, switches, msr_mrids_loadsw, msr_mrids_demand, demand, line):
-        """ Create a ``CapacitorToggler`` object
+        """ Create a ``SwitchingActions`` object
 
         This object should be used as a subscription callback from a ``GridAPPSD``
         object.  This class will toggle the capacitors passed to the constructor
@@ -99,8 +94,7 @@ class SwitchingActions(object):
             An instatiated object that is connected to the gridappsd message bus
             usually this should be the same object which subscribes, but that
             isn't required.
-        capacitor_list: list(str)
-            A list of capacitors mrids to turn on/off
+            A list of switches mrids to turn on/off and DGs to create islands
         """
         self._gapps = gridappsd_obj
         self._flag = 0
@@ -220,8 +214,6 @@ ORDER BY ?cimtype ?name
                        mrid = sw_mrid,
                        sw_con = fr_to)
         switches.append(message) 
-    with open('Switches.json', 'w') as json_file:
-        json.dump(switches, json_file)
     return switches
 
 
@@ -257,8 +249,8 @@ def _main():
         "resultFormat": "JSON",
         "objectType": "LoadBreakSwitch"}     
     obj_msr_loadsw = gapps.get_response(topic, message, timeout=180)
-    with open('measid_LoadbreakSwitch.json', 'w') as json_file:
-        json.dump(obj_msr_loadsw, json_file)    
+    # with open('measid_LoadbreakSwitch.json', 'w') as json_file:
+    #     json.dump(obj_msr_loadsw, json_file)    
 
     # Get measurement MRIDS for kW consumptions at each node
     print('Get Measurement MRIDS for EnergyConsumers.....')
