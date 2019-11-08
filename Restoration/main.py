@@ -282,15 +282,15 @@ def _main():
 
     # Get Eq. MRIDs of Loadbreakswitches
     print('Get Switches Information.....')    
-    # switches = get_switches_mrids(gapps, model_mrid)
+    switches = get_switches_mrids(gapps, model_mrid)
 
     # Load demand and lineparameters
     with open('Demand9500.json', 'r') as read_file:
         demand = json.load(read_file)
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
-    with open('Switches.json', 'r') as read_file:
-        switches = json.load(read_file)
+    # with open('Switches.json', 'r') as read_file:
+    #     switches = json.load(read_file)
 
     print("Initialize.....")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
