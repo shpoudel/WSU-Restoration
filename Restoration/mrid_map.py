@@ -15,7 +15,7 @@ class SW_MRID(object):
         self.switches = switches
         self.LineData = LineData
         
-    def mapping(self):
+    def mapping_res(self):
         op_mrid = []
         cl_mrid = []
         for l in self.LineData:
@@ -34,3 +34,13 @@ class SW_MRID(object):
                         cl_mrid.append(s['mrid'])
         return op_mrid, cl_mrid
     
+    def mapping_loc(self):
+        op_mrid = []
+        for l in self.LineData:
+            if l['index'] in self.op:
+                edge = set([l['from_br'], l['to_br']])
+                for s in self.switches:
+                    check = set(s['sw_con'])
+                    if check == edge:
+                        op_mrid.append(s['mrid'])
+        return op_mrid

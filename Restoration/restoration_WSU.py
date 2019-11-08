@@ -20,7 +20,7 @@ class Restoration:
         """
         pass        
    
-    def res9500 (self, Linepar, LoadData, fault):    
+    def res9500 (self, Linepar, LoadData, opsw):    
         
         # Find Tree and Planning model using Linepar
         G = nx.Graph()
@@ -208,14 +208,7 @@ class Restoration:
         prob += Via[0] == 1.1
         # Add constraints for phase B and phase C once CPLEX is added. Offline works though
 
-        # Insert Fault
-        nFault = len(fault)
-        opsw = []
-        for k in range(nFault):
-            pr = OpenSw(fault[k], Linepar)
-            op = pr.fault_isolation()
-            opsw.append(op)
-        opsw = [item for sublist in opsw for item in sublist]
+        # Open switch from fault Isolation: Fault should never be fed
         for k in range(len(opsw)):
             prob += xij[opsw[k]] == 0
         
@@ -237,7 +230,7 @@ class Restoration:
 
         print('Now solving the restoration problem.......')
         prob.solve()
-        # prob.solve(CPLEX(msg=0))
+        # prob.solve(CPLEX(msg=1))
         prob.writeLP("Check.lp")
         print ("Status:", LpStatus[prob.status])
         print ('Power flow from three different sub-stations..........')

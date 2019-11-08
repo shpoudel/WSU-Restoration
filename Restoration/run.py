@@ -54,6 +54,7 @@ from top_identify import Topology
 from get_Load import PowerData
 from restoration_WSU import Restoration
 from mrid_map import SW_MRID
+from Isolation import OpenSw
 
 
 from gridappsd import GridAPPSD, DifferenceBuilder, utils, GOSS
@@ -151,16 +152,31 @@ class SwitchingActions(object):
 
         # Isolate and restore the fault
         if flag_fault == 1 and self.flag_res == 0:
+            # Isolate the fault 
+            opsw = []
+            for f in fault:
+                pr = OpenSw(f, self.LineData)
+                op = pr.fault_isolation()
+                opsw.append(op)
+            opsw = [item for sublist in opsw for item in sublist]
+            sw_o = SW_MRID(opsw, opsw, self.switches, self.LineData)
+            op_mrid = sw_o.mapping_loc()
+
+            # Fault Isolation in Platform
+            for sw_mrid in op_mrid:
+                self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
+                msg = self._open_diff.get_message()
+                self._gapps.send(self._publish_to_topic, json.dumps(msg))
+
             print('Forming the optimization problem.........')
             res = Restoration()
-            op, cl, = res.res9500(self.LineData, self.DemandData, fault)
-            # print (op, cl)
+            op, cl, = res.res9500(self.LineData, self.DemandData, opsw)
             sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
-            op_mrid, cl_mrid = sw_oc.mapping()
+            op_mrid, cl_mrid = sw_oc.mapping_res()
             # print (op_mrid)
             # print(cl_mrid)   
             
-            # Now reconfiguring the test case in Platform based on obtained MRIDs to mimic black sky event
+            # Now reconfiguring the test case in Platform based on obtained MRIDs
             for sw_mrid in op_mrid:
                 self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                 msg = self._open_diff.get_message()
@@ -214,6 +230,8 @@ ORDER BY ?cimtype ?name
                        mrid = sw_mrid,
                        sw_con = fr_to)
         switches.append(message) 
+    # with open('Switches.json', 'w') as json_file:
+    #     json.dump(switches, json_file) 
     return switches
 
 
@@ -260,6 +278,7 @@ def _main():
         "resultFormat": "JSON",
         "objectType": "EnergyConsumer"}     
     obj_msr_demand = gapps.get_response(topic, message, timeout=180)
+    # print(obj_msr_demand)
 
     # Get Eq. MRIDs of Loadbreakswitches
     print('Get Switches Information.....')    
