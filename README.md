@@ -12,14 +12,14 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
 
     ```console
     osboxes@osboxes> cd WSU-Restoration
-    osboxes@osboxes> docker build --network=host -t wsu-restoration .
+    osboxes@osboxes> docker build --network=host -t wsu-restoration-app .
     ```
 
 1.  Add the following to the gridappsd-docker/docker-compose.yml file
 
     ```` yaml
-    sampleapp:
-      image: wsu-restoration
+    wsu_res_app:
+      image: wsu-restoration-app
       depends_on: 
         gridappsd    
     ````
