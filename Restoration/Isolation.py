@@ -18,7 +18,8 @@ class OpenSw(object):
         Fault Isolation class.
         Parameters
         ----------
-        fault : Fault Location in the feeder
+        fault : Fault Isolation in the feeder. 
+        Look along all possible directions so that fault is never fed
         """
         self.fault = fault
         self.LineSW = LineSW
