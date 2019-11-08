@@ -31,7 +31,7 @@ COPY . .
 # RUN ./cplex_studio129.linux-x86-64.bin
 # Use a symbolic link to the sample app rather than having to
 # mount it at run time (note can still be overriden in docker-compose file)
-RUN ln -s /usr/src/gridappsd-restoration/sample_app.config /appconfig
+RUN ln -s /usr/src/gridappsd-restoration/wsu_res_app.config /appconfig
 
 
 
