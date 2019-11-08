@@ -40,7 +40,7 @@
 """
 Created on Jan 19, 2018
 
-@author: Craig Allwardt
+@author: Craig Allwardt, Shiva Poudel
 """
 
 __version__ = "0.0.8"
@@ -80,8 +80,8 @@ class SwitchingActions(object):
         """ Create a ``SwitchingActions`` object
 
         This object should be used as a subscription callback from a ``GridAPPSD``
-        object.  This class will toggle the capacitors passed to the constructor
-        off and on every five messages that are received on the ``fncs_output_topic``.
+        object.  This class will toggle the switches passed to the constructor
+        off and on based on isolation and restoration that are received on the ``fncs_output_topic``.
 
         Note
         ----
