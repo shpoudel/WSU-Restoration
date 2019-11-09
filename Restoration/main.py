@@ -113,6 +113,9 @@ class SwitchingActions(object):
         self.switches  = switches
         self.TOP = []
         self.flag_res = 0
+        self.flag_iso = 0
+        self._reset = 100
+        self._isosw = []
         _log.info("Building cappacitor list")
 
         
@@ -129,13 +132,18 @@ class SwitchingActions(object):
             of ``GridAPPSD``.  Most message payloads will be serialized dictionaries, but that is
             not a requirement.
         """
-
+        m = json.loads(message.replace("\'",""))
+        timestamp = m["message"] ["timestamp"]
+        iso_time = timestamp + 100
         self._message_count += 1
         flag_fault = 0
         flag_event = 0
 
+        if self.flag_iso == 1:
+            self._reset += 1
+
         # Checking the topology everytime communicating with the platform
-        if self.flag_res == 0:
+        if self.flag_iso == 0:
             top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData)
             TOP, flag_event = top.curr_top()
             self.TOP = TOP
@@ -152,7 +160,7 @@ class SwitchingActions(object):
         # self.flag_load = 1
 
         # Isolate and restore the fault
-        if flag_fault == 1 and self.flag_res == 0:
+        if flag_fault == 1 and self.flag_iso == 0:
             # Isolate the fault 
             opsw = []
             for f in fault:
@@ -167,13 +175,18 @@ class SwitchingActions(object):
             for sw_mrid in op_mrid:
                 self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                 msg = self._open_diff.get_message()
-                print(msg)
                 self._gapps.send(self._publish_to_topic, json.dumps(msg))
                 self._open_diff.clear()
+            
+            # Until Isolation is being performed, do not call optimization            
+            iso_time = timestamp
+            self._isosw = opsw
+            self.flag_iso = 1
 
+        if self._reset == 101 and self.flag_res == 0:
             print('Forming the optimization problem.........')
             res = Restoration()
-            op, cl, = res.res9500(self.LineData, self.DemandData, opsw)
+            op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
             sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
             op_mrid, cl_mrid = sw_oc.mapping_res()
             # print (op_mrid)
@@ -183,7 +196,6 @@ class SwitchingActions(object):
             for sw_mrid in op_mrid:
                 self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                 msg = self._open_diff.get_message()
-                print(msg)
                 self._gapps.send(self._publish_to_topic, json.dumps(msg))  
                 self._open_diff.clear()
 
@@ -223,15 +235,15 @@ def _main():
     print('Get Model Information.....')   
     query = MODEL_EQ(gapps, model_mrid, topic)
     obj_msr_loadsw, obj_msr_demand = query.meas_mrids()
-    switches = query.get_switches_mrids()
+    # switches = query.get_switches_mrids()
     
     # Load demand and lineparameters
     with open('Demand9500.json', 'r') as read_file:
         demand = json.load(read_file)
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
-    # with open('Switches.json', 'r') as read_file:
-    #     switches = json.load(read_file)
+    with open('Switches.json', 'r') as read_file:
+        switches = json.load(read_file)
 
     print("Initialize.....")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
