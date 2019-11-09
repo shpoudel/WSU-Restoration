@@ -223,15 +223,15 @@ def _main():
     print('Get Model Information.....')   
     query = MODEL_EQ(gapps, model_mrid, topic)
     obj_msr_loadsw, obj_msr_demand = query.meas_mrids()
-    # switches = query.get_switches_mrids()
+    switches = query.get_switches_mrids()
     
     # Load demand and lineparameters
     with open('Demand9500.json', 'r') as read_file:
         demand = json.load(read_file)
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
-    with open('Switches.json', 'r') as read_file:
-        switches = json.load(read_file)
+    # with open('Switches.json', 'r') as read_file:
+    #     switches = json.load(read_file)
 
     print("Initialize.....")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
