@@ -55,7 +55,7 @@ class Topology(object):
         TOP.append(message)
         nor_open = ['ln0653457_sw','v7173_48332_sw', 'tsw803273_sw', 'a333_48332_sw','tsw320328_sw',\
                    'a8645_48332_sw','tsw568613_sw']
-        
+        # print(TOP)
         flag_event = 0
         if set(Loadbreak) != set(nor_open):
             flag_event = 1
