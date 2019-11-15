@@ -20,7 +20,7 @@ WORKDIR /usr/src/gridappsd-restoration
 # RUN add-apt-repository ppa:openjdk-r/ppa
 # RUN apt-get update
 # RUN apt-get install -y openjdk-8-jdk
-
+RUN pip install networkx numpy pulp
 
 # Copy all of the source over to the container.
 COPY . .
