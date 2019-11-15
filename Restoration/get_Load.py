@@ -10,7 +10,7 @@ import math
 
 class PowerData(object):
     """
-    WSU Resilient Restoration
+    WSU Resilient Restoration, Get load data from feeder
     """
     def __init__(self, msr_mrids_load, sim_output):
         self.meas_load = msr_mrids_load
@@ -20,31 +20,47 @@ class PowerData(object):
         data1 = self.meas_load
         data2 = self.output
         data2 = json.loads(data2.replace("\'",""))
-        data2 = data2['message']['measurements']     
+        meas_value = data2['message']['measurements']     
+        timestamp = data2["message"] ["timestamp"]
 
         # Find interested mrids of 9500 Node. We are only interested in VA of the nodes
-        # Convert VA to kw and kVAR
-        Demand = []
-        s = 0.
-        for d1 in data1['data']: 
-            if d1['type'] == 'VA':                
-                for n, pq in data2.items():
-                    if n == d1['measid']:
-                        # Check phase of load in 9500 node based on last letter
-                        loadbus = d1['bus']
-                        phase = loadbus[-1].upper()
-                        phi = (pq['angle'])*math.pi/180
-                        message = dict(bus = d1['bus'],
-                                       VA = [pq['magnitude'], pq['angle']],
-                                       Phase = phase,
-                                       kW = 0.001 * pq['magnitude']*np.cos(phi),
-                                       kVaR = 0.001* pq['magnitude']*np.sin(phi))
-                        Demand.append(message)     
-                        break  
-        for d in Demand:
-            s += d['kW']
-        print('Total demand:', s)
+        # Convert VA to kw and kVAR        
+        data1 = data1['data']
+        ds = [d for d in data1 if d['type'] != 'PNV']
 
+        Demand = []
+        for d1 in ds:                
+            if d1['measid'] in meas_value:
+                v = d1['measid']
+                pq = meas_value[v]
+                # Check phase of load in 9500 node based on last letter
+                loadbus = d1['bus']
+                phase = loadbus[-1].upper()
+                phi = (pq['angle'])*math.pi/180
+                message = dict(bus = d1['bus'],
+                                VA = [pq['magnitude'], pq['angle']],
+                                Phase = phase,
+                                kW = 0.001 * pq['magnitude']*np.cos(phi),
+                                kVaR = 0.001* pq['magnitude']*np.sin(phi))
+                Demand.append(message)    
+
+        # Combine the dictionary from S1 and S2 to balanced load. 
+        # VA measumrement has two different loads on S1 and S2 phase
+        for i, l in enumerate(Demand):
+            if i % 2 == 0:
+                d1 = Demand[i]
+                d2 = Demand[i+1]
+                l['kW'] = d1['kW'] + d2['kW']
+                l['kVaR'] = d1['kVaR'] + d2['kVaR']
+        
+        Demand = [l for d, l in enumerate(Demand) if d % 2 == 0]
+        sP = 0
+        sQ = 0
+        for d in Demand:
+            sP += d['kW']
+            sQ += d['kVaR']
+        print('The total real and reactive demand is:', sP, sQ)
+        
         with open('PlatformD.json', 'w') as json_file:
             json.dump(Demand, json_file)
 

@@ -55,6 +55,7 @@ from get_Load import PowerData
 from restoration_WSU import Restoration
 from mrid_map import SW_MRID
 from Isolation import OpenSw
+from model_query import MODEL_EQ
 
 
 from gridappsd import GridAPPSD, DifferenceBuilder, utils, GOSS
@@ -98,8 +99,6 @@ class SwitchingActions(object):
             A list of switches mrids to turn on/off and DGs to create islands
         """
         self._gapps = gridappsd_obj
-        self._flag = 0
-        self._store = []
         self._message_count = 0
         self._last_toggle_on = False
         self._open_diff = DifferenceBuilder(simulation_id)
@@ -112,6 +111,8 @@ class SwitchingActions(object):
         self.switches  = switches
         self.TOP = []
         self.flag_res = 0
+        self.flag_iso = 0
+        self._isosw = []
         _log.info("Building cappacitor list")
 
         
@@ -128,13 +129,38 @@ class SwitchingActions(object):
             of ``GridAPPSD``.  Most message payloads will be serialized dictionaries, but that is
             not a requirement.
         """
-
+        m = json.loads(message.replace("\'",""))
+        timestamp = m["message"] ["timestamp"]
         self._message_count += 1
         flag_fault = 0
         flag_event = 0
 
+        # Restoration to be done only after isolation
+        if self.flag_iso == 1 and self.flag_res == 0:
+            print('Forming the optimization problem.........')
+            res = Restoration()
+            op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
+            sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
+            op_mrid, cl_mrid = sw_oc.mapping_res()
+            # Now reconfiguring the test case in Platform based on obtained MRIDs
+            for sw_mrid in op_mrid:
+                self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
+                msg = self._open_diff.get_message()
+                self._gapps.send(self._publish_to_topic, json.dumps(msg))  
+                self._open_diff.clear()
+
+            for sw_mrid in cl_mrid:
+                self._open_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
+                msg = self._open_diff.get_message()
+                print(msg)
+                self._gapps.send(self._publish_to_topic, json.dumps(msg))  
+                self._open_diff.clear()
+            self.flag_res = 1 
+            # self.flag_iso = 0
+            print('Event #1 Successfully restored......')
+
         # Checking the topology everytime communicating with the platform
-        if self.flag_res == 0:
+        if self.flag_iso == 0:
             top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData)
             TOP, flag_event = top.curr_top()
             self.TOP = TOP
@@ -146,12 +172,12 @@ class SwitchingActions(object):
         # Get consumer loads from platform
         # Not always working so commenting it for now
         # if self.flag_load == 0:
-        # ld = PowerData(self.msr_mrids_demand, message)
-        # ld.demand()
+        ld = PowerData(self.msr_mrids_demand, message)
+        ld.demand()
         # self.flag_load = 1
 
         # Isolate and restore the fault
-        if flag_fault == 1 and self.flag_res == 0:
+        if flag_fault == 1 and self.flag_iso == 0:
             # Isolate the fault 
             opsw = []
             for f in fault:
@@ -167,77 +193,16 @@ class SwitchingActions(object):
                 self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                 msg = self._open_diff.get_message()
                 self._gapps.send(self._publish_to_topic, json.dumps(msg))
-
-            print('Forming the optimization problem.........')
-            res = Restoration()
-            op, cl, = res.res9500(self.LineData, self.DemandData, opsw)
-            sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
-            op_mrid, cl_mrid = sw_oc.mapping_res()
-            # print (op_mrid)
-            # print(cl_mrid)   
+                self._open_diff.clear()
             
-            # Now reconfiguring the test case in Platform based on obtained MRIDs
-            for sw_mrid in op_mrid:
-                self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
-                msg = self._open_diff.get_message()
-                self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-
-            for sw_mrid in cl_mrid:
-                self._open_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
-                msg = self._open_diff.get_message()
-                self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-            self.flag_res = 1 
-            print('Event #1 Successfully restored......')
+            # Until Isolation is being performed, do not call optimization            
+            iso_time = timestamp
+            self._isosw = opsw
+            self.flag_iso = 1
             
-
-def get_switches_mrids(gridappsd_obj, mrid):
-    query = """
-PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX c:  <http://iec.ch/TC57/CIM100#>
-SELECT ?cimtype ?name ?bus1 ?bus2 ?id (group_concat(distinct ?phs;separator="") as ?phases) WHERE {
-  SELECT ?cimtype ?name ?bus1 ?bus2 ?phs ?id WHERE {
- VALUES ?fdrid {"%s"}  # 9500 node
- VALUES ?cimraw {c:LoadBreakSwitch c:Recloser c:Breaker}
- ?fdr c:IdentifiedObject.mRID ?fdrid.
- ?s r:type ?cimraw.
-  bind(strafter(str(?cimraw),"#") as ?cimtype)
- ?s c:Equipment.EquipmentContainer ?fdr.
- ?s c:IdentifiedObject.name ?name.
- ?s c:IdentifiedObject.mRID ?id.
- ?t1 c:Terminal.ConductingEquipment ?s.
- ?t1 c:ACDCTerminal.sequenceNumber "1".
- ?t1 c:Terminal.ConnectivityNode ?cn1. 
- ?cn1 c:IdentifiedObject.name ?bus1.
- ?t2 c:Terminal.ConductingEquipment ?s.
- ?t2 c:ACDCTerminal.sequenceNumber "2".
- ?t2 c:Terminal.ConnectivityNode ?cn2. 
- ?cn2 c:IdentifiedObject.name ?bus2
-	OPTIONAL {?swp c:SwitchPhase.Switch ?s.
- 	?swp c:SwitchPhase.phaseSide1 ?phsraw.
-   	bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs) }
- } ORDER BY ?name ?phs
-}
-GROUP BY ?cimtype ?name ?bus1 ?bus2 ?id
-ORDER BY ?cimtype ?name
-    """ % mrid
-    results = gridappsd_obj.query_data(query, timeout=60)
-    results_obj = results['data']
-    switches = []
-    for p in results_obj['results']['bindings']:
-        sw_mrid = p['id']['value']
-        fr_to = [p['bus1']['value'].upper(), p['bus2']['value'].upper()]
-        message = dict(name = p['name']['value'],
-                       mrid = sw_mrid,
-                       sw_con = fr_to)
-        switches.append(message) 
-    # with open('Switches.json', 'w') as json_file:
-    #     json.dump(switches, json_file) 
-    return switches
-
-
 def _main():
     _log.debug("Starting application")
-    print("Application starting-------------------------------------------------------")
+    print("Application starting------------------------------------------------------- \n")
     global message_period
     parser = argparse.ArgumentParser()
     parser.add_argument("simulation_id",
@@ -252,49 +217,35 @@ def _main():
     message_period = int(opts.message_period)
     sim_request = json.loads(opts.request.replace("\'",""))
     model_mrid = sim_request['power_system_config']['Line_name']
-    print("\n \n The model running is IEEE 9500-node with MRID:", model_mrid)
+    print("The model running is IEEE 9500-node with MRID:", model_mrid, "\n")
     
     _log.debug("Model mrid is: {}".format(model_mrid))
     gapps = GridAPPSD(opts.simulation_id, address=utils.get_gridappsd_address(),
                       username=utils.get_gridappsd_user(), password=utils.get_gridappsd_pass())
-
-    # Get measurement MRIDS for Loadbreakswitches in the feeder
-    print('Get Measurement MRIDS for Loadbreakswitches.....')
     topic = "goss.gridappsd.process.request.data.powergridmodel"
-    message = {
-        "modelId": model_mrid,
-        "requestType": "QUERY_OBJECT_MEASUREMENTS",
-        "resultFormat": "JSON",
-        "objectType": "LoadBreakSwitch"}     
-    obj_msr_loadsw = gapps.get_response(topic, message, timeout=180)
-    # with open('measid_LoadbreakSwitch.json', 'w') as json_file:
-    #     json.dump(obj_msr_loadsw, json_file)    
 
-    # Get measurement MRIDS for kW consumptions at each node
-    print('Get Measurement MRIDS for EnergyConsumers.....')
-    message = {
-        "modelId": model_mrid,
-        "requestType": "QUERY_OBJECT_MEASUREMENTS",
-        "resultFormat": "JSON",
-        "objectType": "EnergyConsumer"}     
-    obj_msr_demand = gapps.get_response(topic, message, timeout=180)
-    # print(obj_msr_demand)
+    # Run queries to get model information
+    print('Get Model Information..... \n')   
+    query = MODEL_EQ(gapps, model_mrid, topic)
+    obj_msr_loadsw, obj_msr_demand = query.meas_mrids()
+    print('Get Object MRIDS.... \n')
+    switches = query.get_switches_mrids()
+    LoadData = query.distLoad()
+    sP = 0.
+    sQ = 0.
+    for l in LoadData:
+        sP += float(l['kW'])
+        sQ += float(l['kVaR'])       
 
-    # Get Eq. MRIDs of Loadbreakswitches
-    print('Get Switches Information.....')    
-    switches = get_switches_mrids(gapps, model_mrid)
-
-    # Load demand and lineparameters
-    with open('Demand9500.json', 'r') as read_file:
-        demand = json.load(read_file)
+    print("The Static kW and kVAR of the feeder is:", sP, sQ, "\n")
+    
+    # Load Line parameters
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
-    # with open('Switches.json', 'r') as read_file:
-    #     switches = json.load(read_file)
 
-    print("Initialize.....")
+    print("Initialize..... \n")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
-    obj_msr_loadsw, obj_msr_demand, demand, line)
+    obj_msr_loadsw, obj_msr_demand, LoadData, line)
     print("Now subscribing....")
     gapps.subscribe(listening_to_topic, toggler)
     while True:
