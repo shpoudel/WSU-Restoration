@@ -21,6 +21,7 @@ class PowerData(object):
         data2 = self.output
         data2 = json.loads(data2.replace("\'",""))
         meas_value = data2['message']['measurements']     
+        timestamp = data2["message"] ["timestamp"]
 
         # Find interested mrids of 9500 Node. We are only interested in VA of the nodes
         # Convert VA to kw and kVAR        
@@ -59,7 +60,7 @@ class PowerData(object):
             sP += d['kW']
             sQ += d['kVaR']
         print('The total real and reactive demand is:', sP, sQ)
-
+        
         with open('PlatformD.json', 'w') as json_file:
             json.dump(Demand, json_file)
 

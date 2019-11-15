@@ -202,7 +202,7 @@ class SwitchingActions(object):
             
 def _main():
     _log.debug("Starting application")
-    print("Application starting-------------------------------------------------------")
+    print("Application starting------------------------------------------------------- \n")
     global message_period
     parser = argparse.ArgumentParser()
     parser.add_argument("simulation_id",
@@ -217,7 +217,7 @@ def _main():
     message_period = int(opts.message_period)
     sim_request = json.loads(opts.request.replace("\'",""))
     model_mrid = sim_request['power_system_config']['Line_name']
-    print("\n \n The model running is IEEE 9500-node with MRID:", model_mrid)
+    print("The model running is IEEE 9500-node with MRID:", model_mrid, "\n")
     
     _log.debug("Model mrid is: {}".format(model_mrid))
     gapps = GridAPPSD(opts.simulation_id, address=utils.get_gridappsd_address(),
@@ -225,22 +225,27 @@ def _main():
     topic = "goss.gridappsd.process.request.data.powergridmodel"
 
     # Run queries to get model information
-    print('Get Model Information.....')   
+    print('Get Model Information..... \n')   
     query = MODEL_EQ(gapps, model_mrid, topic)
     obj_msr_loadsw, obj_msr_demand = query.meas_mrids()
+    print('Get Object MRIDS.... \n')
     switches = query.get_switches_mrids()
+    LoadData = query.distLoad()
+    sP = 0.
+    sQ = 0.
+    for l in LoadData:
+        sP += float(l['kW'])
+        sQ += float(l['kVaR'])       
+
+    print("The Static kW and kVAR of the feeder is:", sP, sQ, "\n")
     
-    # Load demand and lineparameters
-    with open('Demand9500.json', 'r') as read_file:
-        demand = json.load(read_file)
+    # Load Line parameters
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
-    # with open('Switches.json', 'r') as read_file:
-    #     switches = json.load(read_file)
-    # print(obj_msr_loadsw)
-    print("Initialize.....")
+
+    print("Initialize..... \n")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
-    obj_msr_loadsw, obj_msr_demand, demand, line)
+    obj_msr_loadsw, obj_msr_demand, LoadData, line)
     print("Now subscribing....")
     gapps.subscribe(listening_to_topic, toggler)
     while True:

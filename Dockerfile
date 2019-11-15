@@ -16,8 +16,6 @@ WORKDIR /usr/src/gridappsd-restoration
 # uncommenting the next two lines
 # COPY requirements.txt ./
 # RUN RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install networkx numpy pulp
-
 # RUN apt-get install software-properties-common
 # RUN add-apt-repository ppa:openjdk-r/ppa
 # RUN apt-get update
