@@ -35,6 +35,19 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     gridappsd@f4ede7dacb7d:/gridappsd$ ./run-gridappsd.sh
     
     ````
+1.  Run the application container
+
+    ```` console
+    osboxes@osboxes> cd WSU-Restoration
+    osboxes@osboxes> docker exec -it gridappsddocker_wsu_res_app_1 bash
+    
+    # you will now be inside the application container, the following runs the application from terminal
+    
+    root@1b762c641f24:/usr/src/gridappsd-restoration# cd Restoration
+    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py sim_id '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'
+
+    
+    ````
 
 Next to start the application through the viz follow the directions here: https://gridappsd.readthedocs.io/en/latest/using_gridappsd/index.html#start-gridapps-d-platform
 
