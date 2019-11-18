@@ -25,45 +25,46 @@ class Topology(object):
         TOP = self.TOP
         data2 = json.loads(data2.replace("\'",""))
         timestamp = data2["message"] ["timestamp"]
+        meas_value = data2['message']['measurements']
         data2 = data2["message"]["measurements"]
         
         # Find interested mrids. We are only interested in Position of the switches
         ms_id = []
         bus = []
-        for d1 in data1['data']: 
-            if d1['type'] == "Pos":
-                ms_id.append(d1['measid'])
+        data1 = data1['data']
+        ds = [d for d in data1 if d['type'] == 'Pos']
 
         # Store the open switches
-        store = []
-        opens = []
-        for k, v in data2.items():
-            if (v['measurement_mrid']) in ms_id:
-                if v['value'] == 0:
-                    opens.append(v['measurement_mrid'])
-
         Loadbreak = []
-        for d1 in data1['data']: 
-            if d1['measid'] in opens:
-                Loadbreak.append(d1['eqname'])
+        for d1 in ds:                
+            if d1['measid'] in meas_value:
+                v = d1['measid']
+                p = meas_value[v]
+                if p['value'] == 0:
+                    Loadbreak.append(d1['eqname'])
 
         print('The total number of open switches:', len(set(Loadbreak)))
-        # print(timestamp, set(Loadbreak))
+        print(timestamp, set(Loadbreak))
 
         # Create a message dict to store the real time topology:
         message = dict (when = timestamp, op_sw = set(Loadbreak))
         TOP.append(message)
-        nor_open = ['ln0653457_sw','v7173_48332_sw', 'tsw803273_sw', 'a333_48332_sw','tsw320328_sw',\
-                   'a8645_48332_sw','tsw568613_sw']
+
+        # Flush the memory as we only need previous topology to find out the fault location
+        if len(TOP) > 2:
+            TOP = TOP[-2:]
+        
         # print(TOP)
+        # Checing if fault occured.
+        # Replace this with alarm signal
         flag_event = 0
-        if set(Loadbreak) != set(nor_open):
+        if len(set(Loadbreak)) > 7:
             flag_event = 1
             print('\n')
             print ('Fault has occured!!!!!!')
-        return TOP, flag_event
+        return TOP, flag_event, Loadbreak
 
-    def locate_fault(self):
+    def locate_fault(self, LoadBreak):
         G = nx.Graph()
         TOP = self.TOP
         data2 = self.output
@@ -78,24 +79,25 @@ class Topology(object):
                 previous = top['op_sw']
 
         op_fault  = curr_open - previous
+        
         # Here I know what switches are open but need to locate fault in more generalized way..
-        nor_open = ['ln0653457_sw','v7173_48332_sw', 'tsw803273_sw', 'a333_48332_sw','tsw320328_sw',\
-                   'a8645_48332_sw','tsw568613_sw', 'wf856_48332_sw', 'wg127_48332_sw']  
         for l in LineData:
-            if l['line'] not in nor_open:
+            if l['line'] not in previous:
                 G.add_edge(l['from_br'], l['to_br'])
         T = list(nx.bfs_tree(G, source = 'SOURCEBUS').edges())
 
         # Finding Fault node to be used in isolation
-        node = []
+        fault = []
+        flag_fault = 0
         for l in LineData:
             if l['line'] in op_fault:
-                node.append(l['index'])        
-        fault = []
-        for n in node:
-            a = T[n]
-            fault.append(a[1])
-        flag_fault = 1
+                op = [l['from_br'], l['to_br']]
+                op = set(op)
+                for t in T:
+                    if set(t) == op:
+                        fault.append(t[1])
+                        flag_fault = 1
+        print (fault)
         return flag_fault, fault
         # Check for fault if topology changes and alarm is received:
 

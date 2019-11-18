@@ -162,12 +162,12 @@ class SwitchingActions(object):
         # Checking the topology everytime communicating with the platform
         if self.flag_iso == 0:
             top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData)
-            TOP, flag_event = top.curr_top()
+            TOP, flag_event, LoadBreak = top.curr_top()
             self.TOP = TOP
 
-        #Locate fault
+        # Locate fault
         if flag_event == 1:
-            flag_fault, fault = top.locate_fault()
+            flag_fault, fault = top.locate_fault(LoadBreak)
 
         # Get consumer loads from platform
         # Not always working so commenting it for now
