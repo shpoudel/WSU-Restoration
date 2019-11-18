@@ -54,7 +54,7 @@ class MODEL_EQ(object):
                         mrid = sw_mrid,
                         sw_con = fr_to)
             switches.append(message) 
-        print('Switches')
+        print('switches..')
         return switches
 
     def meas_mrids(self):
@@ -126,7 +126,7 @@ class MODEL_EQ(object):
                         kW = 0.001 *  float (ld['p']['value']),
                         kVaR = 0.001 * float(ld['q']['value']))
             LoadData.append(message)   
-        print('Load')
+        print('Load..')
         # sP = 0.
         # sQ = 0.
         # for l in LoadData:
@@ -187,7 +187,7 @@ class MODEL_EQ(object):
                             bus1 = trn['bus']['value'],
                             bus2 = b['bus']['value'])
             Xfmr.append(message)   
-        print('Xfm')
+        print('Xfm.. \n')
         # Now transferring load into primary using XFMR connectivity
         for ld in LoadData:
             node = ld['bus'].strip('s')
