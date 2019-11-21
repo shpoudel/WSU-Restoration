@@ -58,7 +58,7 @@ from Isolation import OpenSw
 from model_query import MODEL_EQ
 
 
-from gridappsd import GridAPPSD, DifferenceBuilder, utils, GOSS
+from gridappsd import GridAPPSD, DifferenceBuilder, utils, GOSS, topics
 from gridappsd.topics import simulation_input_topic, simulation_output_topic, simulation_log_topic, simulation_output_topic
 
 DEFAULT_MESSAGE_PERIOD = 5
@@ -129,76 +129,99 @@ class SwitchingActions(object):
             of ``GridAPPSD``.  Most message payloads will be serialized dictionaries, but that is
             not a requirement.
         """
-        m = json.loads(message.replace("\'",""))
-        timestamp = m["message"] ["timestamp"]
-        self._message_count += 1
-        flag_fault = 0
-        flag_event = 0
 
-        # Restoration to be done only after isolation
-        if self.flag_iso == 1 and self.flag_res == 0:
-            print('Forming the optimization problem.........')
-            res = Restoration()
-            op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
-            sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
-            op_mrid, cl_mrid = sw_oc.mapping_res()
-            # Now reconfiguring the test case in Platform based on obtained MRIDs
-            for sw_mrid in op_mrid:
-                self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
-                msg = self._open_diff.get_message()
-                self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-                self._open_diff.clear()
+        if 'gridappsd-alarms' in headers['destination']:
+            message = json.loads(message.replace("\'",""))
+            for m in message:
+                print(m['created_by']), m['equipment_name']
+            # print(s)
 
-            for sw_mrid in cl_mrid:
-                self._open_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
-                msg = self._open_diff.get_message()
-                print(msg)
-                self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-                self._open_diff.clear()
-            self.flag_res = 1 
-            # self.flag_iso = 0
-            print('Event #1 Successfully restored......')
+        else:
+            self._message_count += 1
+            flag_fault = 0
+            flag_event = 0
+            # print(headers)
 
-        # Checking the topology everytime communicating with the platform
-        if self.flag_iso == 0:
-            top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData)
-            TOP, flag_event, LoadBreak = top.curr_top()
-            self.TOP = TOP
+            # Restoration to be done only after isolation
+            if self.flag_iso == 1 and self.flag_res == 0:
+                print('Forming the optimization problem.........')
+                res = Restoration()
+                op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
+                sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
+                op_mrid, cl_mrid = sw_oc.mapping_res()
+                # Now reconfiguring the test case in Platform based on obtained MRIDs
+                for sw_mrid in op_mrid:
+                    self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
+                    msg = self._open_diff.get_message()
+                    self._gapps.send(self._publish_to_topic, json.dumps(msg))  
+                    self._open_diff.clear()
 
-        # Locate fault
-        if flag_event == 1:
-            flag_fault, fault = top.locate_fault(LoadBreak)
+                for sw_mrid in cl_mrid:
+                    self._open_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
+                    msg = self._open_diff.get_message()
+                    print(msg)
+                    self._gapps.send(self._publish_to_topic, json.dumps(msg))  
+                    self._open_diff.clear()
+                self.flag_res = 1 
+                # self.flag_iso = 0
+                print('Event #1 Successfully restored......')
 
-        # Get consumer loads from platform
-        # Not always working so commenting it for now
-        # if self.flag_load == 0:
-        ld = PowerData(self.msr_mrids_demand, message)
-        ld.demand()
-        # self.flag_load = 1
+            # Checking the topology everytime communicating with the platform
+            if self.flag_iso == 0:
+                top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData)
+                TOP, flag_event, LoadBreak = top.curr_top()
+                self.TOP = TOP
 
-        # Isolate and restore the fault
-        if flag_fault == 1 and self.flag_iso == 0:
-            # Isolate the fault 
-            opsw = []
-            for f in fault:
-                pr = OpenSw(f, self.LineData)
-                op = pr.fault_isolation()
-                opsw.append(op)
-            opsw = [item for sublist in opsw for item in sublist]
-            sw_o = SW_MRID(opsw, opsw, self.switches, self.LineData)
-            op_mrid = sw_o.mapping_loc()
+            # Locate fault
+            if flag_event == 1:
+                flag_fault, fault = top.locate_fault(LoadBreak)
 
-            # Fault Isolation in Platform
-            for sw_mrid in op_mrid:
-                self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
-                msg = self._open_diff.get_message()
-                self._gapps.send(self._publish_to_topic, json.dumps(msg))
-                self._open_diff.clear()
-            
-            # Until Isolation is being performed, do not call optimization            
-            iso_time = timestamp
-            self._isosw = opsw
-            self.flag_iso = 1
+            # Get consumer loads from platform
+            # Not always working so commenting it for now
+            # if self.flag_load == 0:
+            ld = PowerData(self.msr_mrids_demand, message)
+            ld.demand()
+            # self.flag_load = 1
+
+            # Isolate and restore the fault
+            if flag_fault == 1 and self.flag_iso == 0:
+                # Isolate the fault 
+                opsw = []
+                for f in fault:
+                    pr = OpenSw(f, self.LineData)
+                    op = pr.fault_isolation()
+                    opsw.append(op)
+                opsw = [item for sublist in opsw for item in sublist]
+                sw_o = SW_MRID(opsw, opsw, self.switches, self.LineData)
+                op_mrid = sw_o.mapping_loc()
+
+                # Fault Isolation in Platform
+                for sw_mrid in op_mrid:
+                    self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
+                    msg = self._open_diff.get_message()
+                    self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    self._open_diff.clear()
+                
+                # Until Isolation is being performed, do not call optimization            
+                self._isosw = opsw
+                self.flag_iso = 1
+
+# class Alarm(object):
+#     """ A simple class that handles publishing forward and reverse differences
+
+#     The object should be used as a callback from a GridAPPSD object so that the
+#     on_message function will get called each time a message from the simulator.  During
+#     the execution of on_meessage the `SwitchingActions` object will publish a
+#     message to the simulation_input_topic with the forward and reverse difference specified.
+#     """
+
+#     def __init__(self):
+#        pass
+        
+#     def on_message(self, headers, message):
+#         if “gridappsd-alarms” in headers[“destination”]:
+#             print(headers)
+
             
 def _main():
     _log.debug("Starting application")
@@ -214,6 +237,8 @@ def _main():
                         default=DEFAULT_MESSAGE_PERIOD)
     opts = parser.parse_args()
     listening_to_topic = simulation_output_topic(opts.simulation_id)
+    alarm_topic = topics.service_output_topic('gridappsd-alarms',opts.simulation_id)
+    print(alarm_topic)
     message_period = int(opts.message_period)
     sim_request = json.loads(opts.request.replace("\'",""))
     model_mrid = sim_request['power_system_config']['Line_name']
@@ -247,7 +272,9 @@ def _main():
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
     obj_msr_loadsw, obj_msr_demand, LoadData, line)
     print("Now subscribing....")
+    # alarms = Alarm()   
     gapps.subscribe(listening_to_topic, toggler)
+    gapps.subscribe(alarm_topic, toggler) 
     while True:
         time.sleep(0.1)
 
