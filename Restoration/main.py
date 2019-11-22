@@ -256,6 +256,7 @@ def _main():
     print('Get Object MRIDS.... \n')
     switches = query.get_switches_mrids()
     LoadData = query.distLoad()
+    query.Inverters()
     sP = 0.
     sQ = 0.
     for l in LoadData:
