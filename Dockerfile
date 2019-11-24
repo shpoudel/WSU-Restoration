@@ -6,6 +6,9 @@ FROM gridappsd/app-container-base:develop
 # the travis docker build command and add them to the image.
 ARG TIMESTAMP
 RUN echo $TIMESTAMP > /dockerbuildversion.txt 
+# RUN apt-get update \
+#     && apt-get install -y \
+#        libatlas3-base
 
 # Pick a spot to put our application code
 # (note gridappsd-python is located at /usr/src/gridappsd-python)
@@ -30,6 +33,7 @@ COPY . .
 # Use a symbolic link to the sample app rather than having to
 # mount it at run time (note can still be overriden in docker-compose file)
 RUN ln -s /usr/src/gridappsd-restoration/wsu_res_app.config /appconfig
+# CMD cd /home/gridappsd/cplex/cplex/python/2.7/x86-64_linux; sudo python setup.py install ; cd /usr/src/gridappsd-restoration ; python /usr/src/gridappsd-python/register_app.py
 
 
 

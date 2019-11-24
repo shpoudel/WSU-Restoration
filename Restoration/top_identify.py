@@ -12,12 +12,14 @@ class Topology(object):
     WSU Resilient Restoration 
     Identify the current topology of the test case
     """
-    def __init__(self, msr_mrids_load, switches, sim_output, TOP, LineData):
+    def __init__(self, msr_mrids_load, switches, sim_output, TOP, LineData, alarm, faulted):
         self.meas_load = msr_mrids_load
         self.output = sim_output
         self.switches = switches
         self.TOP = TOP
         self.LineData =  LineData
+        self._alarm =  alarm
+        self._faulted = faulted
         
     def curr_top(self):
         data1 = self.meas_load
@@ -42,7 +44,7 @@ class Topology(object):
                 p = meas_value[v]
                 if p['value'] == 0:
                     Loadbreak.append(d1['eqname'])
-
+        print('.......................................')
         print('The total number of open switches:', len(set(Loadbreak)))
         print(timestamp, set(Loadbreak))
 
@@ -58,10 +60,8 @@ class Topology(object):
         # Checing if fault occured.
         # Replace this with alarm signal
         flag_event = 0
-        if len(set(Loadbreak)) > 7:
+        if self._alarm == 1:
             flag_event = 1
-            print('\n')
-            print ('Fault has occured!!!!!!')
         return TOP, flag_event, Loadbreak
 
     def locate_fault(self, LoadBreak):
@@ -97,7 +97,7 @@ class Topology(object):
                     if set(t) == op:
                         fault.append(t[1])
                         flag_fault = 1
-        print (fault)
+        # print (fault)
         return flag_fault, fault
         # Check for fault if topology changes and alarm is received:
 

@@ -60,6 +60,8 @@ class PowerData(object):
             sP += d['kW']
             sQ += d['kVaR']
         print('The total real and reactive demand is:', sP, sQ)
+        print('.....................................................')
+        print('\n')
         
         with open('PlatformD.json', 'w') as json_file:
             json.dump(Demand, json_file)

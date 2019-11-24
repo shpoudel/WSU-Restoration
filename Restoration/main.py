@@ -113,6 +113,8 @@ class SwitchingActions(object):
         self.flag_res = 0
         self.flag_iso = 0
         self._isosw = []
+        self._alarm = 0
+        self._faulted = []
         _log.info("Building cappacitor list")
 
         
@@ -131,24 +133,34 @@ class SwitchingActions(object):
         """
 
         if 'gridappsd-alarms' in headers['destination']:
-            message = json.loads(message.replace("\'",""))
+            message = json.loads(message.replace("\'",""))            
             for m in message:
-                print(m['created_by']), m['equipment_name']
-            # print(s)
-
+                self._faulted.append(m['equipment_name'])
+                print(m)
+                # Check for who made changes and trigger alarm
+                if m['created_by'] != 'system' and m['value'] == 1:
+                    print('\n')
+                    print('Alarm received for fault, Switch is open: ', m['equipment_name'])
+                    print('\n')
+                    self._alarm = 1
+                else:
+                    print('\n')
+                    print('Operator action done!!')
+                    print('\n')
+                    
         else:
-            self._message_count += 1
+            self._message_count += 1            
             flag_fault = 0
             flag_event = 0
-            # print(headers)
 
             # Restoration to be done only after isolation
-            if self.flag_iso == 1 and self.flag_res == 0:
+            if self.flag_iso == 1:
                 print('Forming the optimization problem.........')
                 res = Restoration()
                 op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
                 sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
                 op_mrid, cl_mrid = sw_oc.mapping_res()
+
                 # Now reconfiguring the test case in Platform based on obtained MRIDs
                 for sw_mrid in op_mrid:
                     self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
@@ -162,29 +174,25 @@ class SwitchingActions(object):
                     print(msg)
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))  
                     self._open_diff.clear()
-                self.flag_res = 1 
-                # self.flag_iso = 0
-                print('Event #1 Successfully restored......')
+                self.flag_iso = 0
+                self._alarm = 0
+                print('Event successfully restored......')
 
             # Checking the topology everytime communicating with the platform
-            if self.flag_iso == 0:
-                top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData)
-                TOP, flag_event, LoadBreak = top.curr_top()
-                self.TOP = TOP
+            top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData, self._alarm, self._faulted)
+            TOP, flag_event, LoadBreak = top.curr_top()
+            self.TOP = TOP
 
             # Locate fault
             if flag_event == 1:
                 flag_fault, fault = top.locate_fault(LoadBreak)
 
             # Get consumer loads from platform
-            # Not always working so commenting it for now
-            # if self.flag_load == 0:
             ld = PowerData(self.msr_mrids_demand, message)
             ld.demand()
-            # self.flag_load = 1
 
             # Isolate and restore the fault
-            if flag_fault == 1 and self.flag_iso == 0:
+            if flag_fault == 1:
                 # Isolate the fault 
                 opsw = []
                 for f in fault:
