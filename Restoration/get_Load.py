@@ -19,7 +19,7 @@ class PowerData(object):
     def demand(self):
         data1 = self.meas_load
         data2 = self.output
-        data2 = json.loads(data2.replace("\'",""))
+        # data2 = json.loads(data2.replace("\'",""))
         meas_value = data2['message']['measurements']     
         timestamp = data2["message"] ["timestamp"]
 

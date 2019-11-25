@@ -115,6 +115,7 @@ class SwitchingActions(object):
         self._isosw = []
         self._alarm = 0
         self._faulted = []
+        self._iso_timestamp = 10000000000
         _log.info("Building cappacitor list")
 
         
@@ -131,9 +132,11 @@ class SwitchingActions(object):
             of ``GridAPPSD``.  Most message payloads will be serialized dictionaries, but that is
             not a requirement.
         """
+        if type(message) == str:
+            message = json.loads(message)
 
         if 'gridappsd-alarms' in headers['destination']:
-            message = json.loads(message.replace("\'",""))            
+            # message = json.loads(message.replace("\'",""))            
             for m in message:
                 self._faulted.append(m['equipment_name'])
                 print(m)
@@ -149,12 +152,15 @@ class SwitchingActions(object):
                     print('\n')
                     
         else:
+            if not message['message']['measurements']:
+                return
+            timestamp = message["message"] ["timestamp"]
             self._message_count += 1            
             flag_fault = 0
             flag_event = 0
 
             # Restoration to be done only after isolation
-            if self.flag_iso == 1:
+            if self.flag_iso == 1 and (timestamp - self._iso_timestamp) > 6 :
                 print('Forming the optimization problem.........')
                 res = Restoration()
                 op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
@@ -212,7 +218,9 @@ class SwitchingActions(object):
                 
                 # Until Isolation is being performed, do not call optimization            
                 self._isosw = opsw
+                self._iso_timestamp = timestamp
                 self.flag_iso = 1
+                self._alarm = 0
 
 # class Alarm(object):
 #     """ A simple class that handles publishing forward and reverse differences

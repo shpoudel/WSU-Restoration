@@ -229,8 +229,8 @@ class Restoration:
         prob += Pijc[2751] == 0
 
         print('Now solving the restoration problem.......')
-        prob.solve()
-        # prob.solve(CPLEX(msg=1))
+        # prob.solve()
+        prob.solve(CPLEX(msg=1))
         prob.writeLP("Check.lp")
         print ("Status:", LpStatus[prob.status])
         print ('Power flow from three different sub-stations..........')
@@ -244,10 +244,10 @@ class Restoration:
         op = []
         cl = []
         for k in range(nEdges):
-            if xij[k].varValue == 0:
+            if xij[k].varValue < 0.1:
                 op.append(k)
         for k in range(9):
-            if xij[No[k]].varValue == 1:
+            if xij[No[k]].varValue > 0.5:
                 cl.append(No[k])
         return op, cl
         # for k in range(len(No)):

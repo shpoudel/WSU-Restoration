@@ -19,20 +19,20 @@ class Topology(object):
         self.TOP = TOP
         self.LineData =  LineData
         self._alarm =  alarm
-        self._faulted = faulted
+        self._faulted = faulted     
         
     def curr_top(self):
         data1 = self.meas_load
-        data2 = self.output
+        data2 = self.output     
         TOP = self.TOP
-        data2 = json.loads(data2.replace("\'",""))
+        # data2 = json.loads(data2.replace("\'",""))
         timestamp = data2["message"] ["timestamp"]
         meas_value = data2['message']['measurements']
         data2 = data2["message"]["measurements"]
         
         # Find interested mrids. We are only interested in Position of the switches
         ms_id = []
-        bus = []
+        bus = []     
         data1 = data1['data']
         ds = [d for d in data1 if d['type'] == 'Pos']
 
@@ -69,7 +69,7 @@ class Topology(object):
         TOP = self.TOP
         data2 = self.output
         LineData =  self.LineData
-        data2 = json.loads(data2.replace("\'",""))
+        # data2 = json.loads(data2.replace("\'",""))
         timestamp = data2["message"] ["timestamp"]
         # Check with previous topology:
         for top in TOP:
