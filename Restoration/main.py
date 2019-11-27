@@ -284,10 +284,27 @@ def _main():
     # Load Line parameters
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
+    LineData = query.linepar(line)
+
+    #.....................................................................
+    # Checking isolation and restoration before starting the visualization
+    opsw = []
+    fault = ['M1047513', 'M1047PV-2', 'M1026CHP-2']
+    for f in fault:
+        pr = OpenSw(f, line)
+        op = pr.fault_isolation()
+        opsw.append(op)
+    opsw = [item for sublist in opsw for item in sublist]
+    print(opsw)
+    res = Restoration()
+    op, cl, = res.res9500(line, LoadData, opsw)
+    print (cl)
+    # .....................................................................
+
 
     print("Initialize..... \n")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
-    obj_msr_loadsw, obj_msr_demand, LoadData, line)
+    obj_msr_loadsw, obj_msr_demand, LoadData, LineData)
     print("Now subscribing....")
     # alarms = Alarm()   
     gapps.subscribe(listening_to_topic, toggler)

@@ -58,7 +58,9 @@ class Restoration:
         Qija = LpVariable.dicts("xQa", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
         Qijb = LpVariable.dicts("xQb", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
         Qijc = LpVariable.dicts("xQc", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Via = LpVariable.dicts("xVa", ((i) for i in range(nNodes) ), lowBound=0.5, upBound=1.1, cat='Continous')
+        Via = LpVariable.dicts("xVa", ((i) for i in range(nNodes) ), lowBound=0.9, upBound=1.1025, cat='Continous')
+        Vib = LpVariable.dicts("xVb", ((i) for i in range(nNodes) ), lowBound=0.9, upBound=1.1025, cat='Continous')
+        Vic = LpVariable.dicts("xVc", ((i) for i in range(nNodes) ), lowBound=0.9, upBound=1.1025, cat='Continous')
 
         # Optimization problem objective definitions
         # Maximize the power flow from feeder 
@@ -158,7 +160,7 @@ class Restoration:
             prob += Qijc[k] >= -bigM * xij[k] 
 
         # Voltage constraints by coupling with switch variable
-        base_Z = 7.2**2
+        base_Z = 12.47**2
         M = 4
         unit = 1.
         # Phase A
@@ -169,17 +171,10 @@ class Restoration:
             ind1 = Nodes.index(n1)
             ind2 = Nodes.index(n2)   
             length = l['length']
-            Rmatrix =  list(np.zeros(9))
-            Xmatrix =  list(np.zeros(9))
-            if l['nPhase'] == 3:
-                Rmatrix = l['r']
-                Xmatrix = l['x']
-                r_aa,x_aa,r_ab,x_ab,r_ac,x_ac = Rmatrix[0], Xmatrix[0], Rmatrix[1], Xmatrix[1], Rmatrix[2], Xmatrix[2]
-            if l['nPhase'] == 1 and l['Phase'] == 'A':
-                r, x = l['r'], l['x']
-                Rmatrix[0], Xmatrix[0] =  r[0], x[0]
-                r_aa,x_aa,r_ab,x_ab,r_ac,x_ac = Rmatrix[0], Xmatrix[0], Rmatrix[1], Xmatrix[1], Rmatrix[2], Xmatrix[2]
-
+            Rmatrix =  l['r']
+            Xmatrix =  l['x']
+            r_aa,x_aa,r_ab,x_ab,r_ac,x_ac = Rmatrix[0], Xmatrix[0], Rmatrix[1], Xmatrix[1], Rmatrix[2], Xmatrix[2]
+            # Write voltage constraints
             if l['is_Switch'] == 1:
                 prob += Via[ind1]-Via[ind2] - \
                 2*r_aa*length/(unit*base_Z*1000)*Pija[k]- \
@@ -187,7 +182,7 @@ class Restoration:
                 (r_ab+np.sqrt(3)*x_ab)*length/(unit*base_Z*1000)*Pijb[k] +\
                 (x_ab-np.sqrt(3)*r_ab)*length/(unit*base_Z*1000)*Qijb[k] +\
                 (r_ac-np.sqrt(3)*x_ac)*length/(unit*base_Z*1000)*Pijc[k] +\
-                (x_ac+np.sqrt(3)*r_ac)*length/(unit*base_Z*1000)*Qijc[k]-M*(1-xij[k]) <= 0
+                (x_ac+np.sqrt(3)*r_ac)*length/(unit*base_Z*1000)*Qijc[k] - M*(1-xij[k]) <= 0
                 # Another inequality        
                 prob += Via[ind1]-Via[ind2] - \
                 2*r_aa*length/(unit*base_Z*1000)*Pija[k]- \
@@ -195,7 +190,7 @@ class Restoration:
                 (r_ab+np.sqrt(3)*x_ab)*length/(unit*base_Z*1000)*Pijb[k] +\
                 (x_ab-np.sqrt(3)*r_ab)*length/(unit*base_Z*1000)*Qijb[k] +\
                 (r_ac-np.sqrt(3)*x_ac)*length/(unit*base_Z*1000)*Pijc[k] +\
-                (x_ac+np.sqrt(3)*r_ac)*length/(unit*base_Z*1000)*Qijc[k]+M*(1-xij[k]) >= 0
+                (x_ac+np.sqrt(3)*r_ac)*length/(unit*base_Z*1000)*Qijc[k] + M*(1-xij[k]) >= 0
             else: 
                 prob += Via[ind1]-Via[ind2] - \
                 2*r_aa*length/(unit*base_Z*1000)*Pija[k]- \
@@ -205,8 +200,84 @@ class Restoration:
                 (r_ac-np.sqrt(3)*x_ac)*length/(unit*base_Z*1000)*Pijc[k] +\
                 (x_ac+np.sqrt(3)*r_ac)*length/(unit*base_Z*1000)*Qijc[k] == 0
 
-        prob += Via[0] == 1.1
-        # Add constraints for phase B and phase C once CPLEX is added. Offline works though
+        # Phase B
+        for m, l in enumerate(Linepar):
+            k = l['index']
+            n1 = l['from_br'] 
+            n2 = l['to_br']    
+            ind1 = Nodes.index(n1)
+            ind2 = Nodes.index(n2)   
+            length = l['length']
+            Rmatrix =  l['r']
+            Xmatrix =  l['x']
+            r_bb,x_bb,r_ba,x_ba,r_bc,x_bc = Rmatrix[4], Xmatrix[4], Rmatrix[3], Xmatrix[3], Rmatrix[5], Xmatrix[5]
+            # Write voltage constraints
+            if l['is_Switch'] == 1:
+                prob += Vib[ind1]-Vib[ind2] - \
+                2*r_bb*length/(unit*base_Z*1000)*Pijb[k]- \
+                2*x_bb*length/(unit*base_Z*1000)*Qijb[k]+ \
+                (r_ba+np.sqrt(3)*x_ba)*length/(unit*base_Z*1000)*Pija[k] +\
+                (x_ba-np.sqrt(3)*r_ba)*length/(unit*base_Z*1000)*Qija[k] +\
+                (r_bc-np.sqrt(3)*x_bc)*length/(unit*base_Z*1000)*Pijc[k] +\
+                (x_bc+np.sqrt(3)*r_bc)*length/(unit*base_Z*1000)*Qijc[k] - M*(1-xij[k]) <= 0
+                # Another inequality        
+                prob += Vib[ind1]-Vib[ind2] - \
+                2*r_bb*length/(unit*base_Z*1000)*Pijb[k]- \
+                2*x_bb*length/(unit*base_Z*1000)*Qijb[k]+ \
+                (r_ba+np.sqrt(3)*x_ba)*length/(unit*base_Z*1000)*Pija[k] +\
+                (x_ba-np.sqrt(3)*r_ba)*length/(unit*base_Z*1000)*Qija[k] +\
+                (r_bc-np.sqrt(3)*x_bc)*length/(unit*base_Z*1000)*Pijc[k] +\
+                (x_bc+np.sqrt(3)*r_bc)*length/(unit*base_Z*1000)*Qijc[k] + M*(1-xij[k]) >= 0
+            else: 
+                prob += Vib[ind1]-Vib[ind2] - \
+                2*r_bb*length/(unit*base_Z*1000)*Pijb[k]- \
+                2*x_bb*length/(unit*base_Z*1000)*Qijb[k]+ \
+                (r_ba+np.sqrt(3)*x_ba)*length/(unit*base_Z*1000)*Pija[k] +\
+                (x_ba-np.sqrt(3)*r_ba)*length/(unit*base_Z*1000)*Qija[k] +\
+                (r_bc-np.sqrt(3)*x_bc)*length/(unit*base_Z*1000)*Pijc[k] +\
+                (x_bc+np.sqrt(3)*r_bc)*length/(unit*base_Z*1000)*Qijc[k] == 0
+
+        # Phase C
+        for m, l in enumerate(Linepar):
+            k = l['index']
+            n1 = l['from_br'] 
+            n2 = l['to_br']    
+            ind1 = Nodes.index(n1)
+            ind2 = Nodes.index(n2)   
+            length = l['length']
+            Rmatrix =  l['r']
+            Xmatrix =  l['x']
+            r_cc,x_cc,r_ca,x_ca,r_cb,x_cb = Rmatrix[8], Xmatrix[8], Rmatrix[6], Xmatrix[6], Rmatrix[7], Xmatrix[7]
+            # Write voltage constraints
+            if l['is_Switch'] == 1:
+                prob += Vic[ind1]-Vic[ind2] - \
+                2*r_cc*length/(unit*base_Z*1000)*Pijc[k]- \
+                2*x_cc*length/(unit*base_Z*1000)*Qijc[k]+ \
+                (r_ca+np.sqrt(3)*x_ca)*length/(unit*base_Z*1000)*Pija[k] +\
+                (x_ca-np.sqrt(3)*r_ca)*length/(unit*base_Z*1000)*Qija[k] +\
+                (r_cb-np.sqrt(3)*x_cb)*length/(unit*base_Z*1000)*Pijb[k] +\
+                (x_cb+np.sqrt(3)*r_cb)*length/(unit*base_Z*1000)*Qijb[k] - M*(1-xij[k]) <= 0
+                # Another inequality        
+                prob += Vic[ind1]-Vic[ind2] - \
+                2*r_cc*length/(unit*base_Z*1000)*Pijc[k]- \
+                2*x_cc*length/(unit*base_Z*1000)*Qijc[k]+ \
+                (r_ca+np.sqrt(3)*x_ca)*length/(unit*base_Z*1000)*Pija[k] +\
+                (x_ca-np.sqrt(3)*r_ca)*length/(unit*base_Z*1000)*Qija[k] +\
+                (r_cb-np.sqrt(3)*x_cb)*length/(unit*base_Z*1000)*Pijb[k] +\
+                (x_cb+np.sqrt(3)*r_cb)*length/(unit*base_Z*1000)*Qijb[k] + M*(1-xij[k]) >= 0
+            else: 
+                prob += Vic[ind1]-Vic[ind2] - \
+                2*r_cc*length/(unit*base_Z*1000)*Pijc[k]- \
+                2*x_cc*length/(unit*base_Z*1000)*Qijc[k]+ \
+                (r_ca+np.sqrt(3)*x_ca)*length/(unit*base_Z*1000)*Pija[k] +\
+                (x_ca-np.sqrt(3)*r_ca)*length/(unit*base_Z*1000)*Qija[k] +\
+                (r_cb-np.sqrt(3)*x_cb)*length/(unit*base_Z*1000)*Pijb[k] +\
+                (x_cb+np.sqrt(3)*r_cb)*length/(unit*base_Z*1000)*Qijb[k] == 0
+        
+        # Initialize source bus at 1.05 p.u. V^2 = 1.1025
+        prob += Via[0] == 1.1025
+        prob += Vib[0] == 1.1025
+        prob += Vic[0] == 1.1025
 
         # Open switch from fault Isolation: Fault should never be fed
         for k in range(len(opsw)):
@@ -221,12 +292,23 @@ class Restoration:
             nSw_C =  len(sw) 
             prob += lpSum(xij[sw[j]] for j in range(nSw_C)) <= nSw_C - 1
 
-        # Transformer kVA limit constraints. P^2 + Q^2 <= S^2
-        # Add this after CPLEX is installed
+        # No reverse real power flow in substation
+        sub = [4, 27, 34]
+        for s in sub:
+            prob += Pija[s] >= 0
+            prob += Pijb[s] >= 0
+            prob += Pijc[s] >= 0
+            prob += Pija[s] <= 3000
+            prob += Pijb[s] <= 3000
+            prob += Pijc[s] <= 3000
 
         # Single phase switch can't carry power in other phase
+        # LINE.TSW568613_SW        
         prob += Pijb[2751] == 0
         prob += Pijc[2751] == 0
+        # LINE.TSW320328_SW
+        prob += Pija[2750] == 0
+        prob += Pijb[2750] == 0        
 
         print('Now solving the restoration problem.......')
         # prob.solve()
@@ -249,6 +331,7 @@ class Restoration:
         for k in range(9):
             if xij[No[k]].varValue > 0.5:
                 cl.append(No[k])
+        # print (cl)
         return op, cl
         # for k in range(len(No)):
         #     print(xij[No[k]].varValue)

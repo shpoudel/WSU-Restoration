@@ -293,3 +293,40 @@ class MODEL_EQ(object):
         # print(Inv)
         print('Inverter..')
         
+    def linepar(self, Linepar):
+
+        # Checking Linepar and forming R and X matrix to be 9 by 9 always. Especially the capacitor control element
+        # and two phase line. Other will be always 9*9
+        for line in Linepar:
+            if line['nPhase'] == 2:
+                line['r'] = [1.13148, 0.0, 0.142066, 0.0, 0.001, 0.0, 0.142066, 0.0, 1.13362]
+                line['x'] = [0.884886, 0.0, 0.366115, 0.0, 0.001, 0.0, 0.366115, 0.0, 0.882239]
+
+        for line in Linepar:
+            if line['nPhase'] == 1 and line['Phase'] == 'A':
+                r = line['r']
+                x = line['x']
+                line['r'] = [r[0], 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+                line['x'] = [x[0], 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+
+        for line in Linepar:
+            if line['nPhase'] == 1 and line['Phase'] == 'B':
+                r = line['r']
+                x = line['x']
+                line['r'] = [0.001, 0.0, 0.0, 0.0, r[0], 0.0, 0.0, 0.0, 0.001]
+                line['x'] = [0.001, 0.0, 0.0, 0.0, x[0], 0.0, 0.0, 0.0, 0.001]
+
+        for line in Linepar:
+            if line['nPhase'] == 1 and line['Phase'] == 'C':
+                r = line['r']
+                x = line['x']
+                line['r'] = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, r[0]]
+                line['x'] = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, x[0]]
+
+        cap = [32, 605, 482, 1811]
+        for line in Linepar:
+            if line['index'] in cap:
+                line['r'] = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+                line['x'] = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+
+        return Linepar
