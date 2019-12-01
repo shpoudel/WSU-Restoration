@@ -161,7 +161,7 @@ class SwitchingActions(object):
 
             # Restoration to be done only after isolation
             if self.flag_iso == 1 and (timestamp - self._iso_timestamp) > 6 :
-                print('Forming the optimization problem.........')
+                print('Modeling the optimization problem.........')
                 res = Restoration()
                 op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
                 sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
@@ -172,14 +172,14 @@ class SwitchingActions(object):
                     self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                     msg = self._open_diff.get_message()
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-                    self._open_diff.clear()
+                    # self._open_diff.clear()
 
                 for sw_mrid in cl_mrid:
                     self._open_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
                     msg = self._open_diff.get_message()
                     print(msg)
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-                    self._open_diff.clear()
+                    # self._open_diff.clear()
                 self.flag_iso = 0
                 self._alarm = 0
                 print('Event successfully restored......')
@@ -214,7 +214,7 @@ class SwitchingActions(object):
                     self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                     msg = self._open_diff.get_message()
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))
-                    self._open_diff.clear()
+                    # self._open_diff.clear()
                 
                 # Until Isolation is being performed, do not call optimization            
                 self._isosw = opsw
@@ -281,24 +281,24 @@ def _main():
 
     print("The Static kW and kVAR of the feeder is:", sP, sQ, "\n")
     
-    # Load Line parameters
+    # Line parameters for graph theoritic approach
     with open('LineData.json', 'r') as read_file:
         line = json.load(read_file)
     LineData = query.linepar(line)
 
     #.....................................................................
     # Checking isolation and restoration before starting the visualization
-    opsw = []
-    fault = ['M1047513', 'M1047PV-2', 'M1026CHP-2']
-    for f in fault:
-        pr = OpenSw(f, line)
-        op = pr.fault_isolation()
-        opsw.append(op)
-    opsw = [item for sublist in opsw for item in sublist]
-    print(opsw)
-    res = Restoration()
-    op, cl, = res.res9500(line, LoadData, opsw)
-    print (cl)
+    # opsw = []
+    # fault = ['M1026354', 'M1047513']
+    # for f in fault:
+    #     pr = OpenSw(f, line)
+    #     op = pr.fault_isolation()
+    #     opsw.append(op)
+    # opsw = [item for sublist in opsw for item in sublist]
+    # print(opsw)
+    # res = Restoration()
+    # op, cl, = res.res9500(line, LoadData, opsw)
+    # print (cl)
     # .....................................................................
 
 

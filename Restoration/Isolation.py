@@ -43,8 +43,10 @@ class OpenSw(object):
         # ways stores all possible paths from source to fault location
         ways = list(nx.all_simple_paths(G, source = Source, target = Fault))
         s = []
+        s1 = []
         ind = []
         vector = []
+        vector1 = []
         # Find all possible paths     
         for i in range(len(ways)):  
             flag = 0          
@@ -58,15 +60,19 @@ class OpenSw(object):
                     if l['is_Switch']:
                         check = set([l['from_br'], l['to_br']])
                         if check == store:
+                            vector1.append(l['line'])
                             vector.append(check)
                             flag = 1
                             break
                 if flag == 1:
                     break
+        for v1 in vector1:
+            if v1 not in s1:
+                s1.append(v1)
         for v in vector:
             if v not in s:
                 s.append(v)
-        print ('The Switches to open for Fault Isolation are: \n ', s)
+        print ('The Switche/s to open for Fault Isolation are: \n ', s1)
     
         # Find indices to include in optimization problem for x_ij variable
         for sw in s:
@@ -76,7 +82,7 @@ class OpenSw(object):
                 if check == sw:
                     ind.append(l['index'])
         print('\n')
-        print ('The indices to open for Fault Isolation are: \n ', ind) 
+        print ('The indice/s to open for Fault Isolation are: \n ', ind) 
         return ind
     
 
