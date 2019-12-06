@@ -4,6 +4,7 @@ import numpy as np
 from pulp import *
 import math
 from Isolation import OpenSw
+import timeit
 
 class Restoration:
     """
@@ -20,14 +21,14 @@ class Restoration:
         """
         pass        
    
-    def res9500 (self, Linepar, LoadData, opsw):    
+    def res9500 (self, Linepar, LoadData, opsw, Cycles):    
         
         # Find Tree and Planning model using Linepar
         G = nx.Graph()
         
         # Note: If required, this nor_open list can be obtained from Platform
         nor_open = ['ln0653457_sw','v7173_48332_sw', 'tsw803273_sw', 'a333_48332_sw','tsw320328_sw',\
-                   'a8645_48332_sw','tsw568613_sw', 'wf856_48332_sw', 'wg127_48332_sw','dgv1', 'dgv2' ]  
+                   'a8645_48332_sw','tsw568613_sw', 'wf856_48332_sw', 'wg127_48332_sw','dgv1','dgv2','dgv3', 'dgv4','dgv5', 'dgv6','dgv7']  
         for l in Linepar:
             if l['line'] not in nor_open:
                 G.add_edge(l['from_br'], l['to_br'])
@@ -58,18 +59,18 @@ class Restoration:
         Qija = LpVariable.dicts("xQa", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
         Qijb = LpVariable.dicts("xQb", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
         Qijc = LpVariable.dicts("xQc", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Via = LpVariable.dicts("xVa", ((i) for i in range(nNodes) ), lowBound=0.9, upBound=1.1125, cat='Continous')
-        Vib = LpVariable.dicts("xVb", ((i) for i in range(nNodes) ), lowBound=0.9, upBound=1.1125, cat='Continous')
-        Vic = LpVariable.dicts("xVc", ((i) for i in range(nNodes) ), lowBound=0.9, upBound=1.1125, cat='Continous')
+        Via = LpVariable.dicts("xVa", ((i) for i in range(nNodes) ), lowBound=0.79, upBound=1.2625, cat='Continous')
+        Vib = LpVariable.dicts("xVb", ((i) for i in range(nNodes) ), lowBound=0.79, upBound=1.2625, cat='Continous')
+        Vic = LpVariable.dicts("xVc", ((i) for i in range(nNodes) ), lowBound=0.79, upBound=1.2625, cat='Continous')
 
         # Optimization problem objective definitions
         # Maximize the power flow from feeder 
         prob = LpProblem("Resilient Restoration",LpMinimize)
-        No = [2745, 2746, 2747, 2748, 2749, 2750, 2751, 2752, 2753, 2754, 2755]
+        No = [2745, 2746, 2747, 2748, 2749, 2750, 2751, 2752, 2753, 2754, 2755, 2756, 2757, 2758, 2759, 2760]
         # prob += -(Pija[0] + Pijb[0] + Pijc[0]) + 5 * lpSum(xij[No[k]] for k in range(11))
-        mult = -10000
-        prob += lpSum(si[k] * mult for k in range(nNodes)) - lpSum(xij[i] for i in range(nEdges - 11)) + \
-                5 * lpSum(xij[No[k]] for k in range(9)) + 10 * xij[2754] + 10 * xij[2755]
+        mult = -100
+        prob += lpSum(si[k] * mult for k in range(nNodes)) - .2* lpSum(xij[i] for i in range(nEdges - 16)) + \
+                .2 * lpSum(xij[No[k]] for k in range(9)) + 40 * (xij[2754] + xij[2755] + xij[2756] + xij[2757] +xij[2758] + xij[2759] + xij[2760])
 
         # Constraints (v_i<=1)
         for k in range(nNodes):
@@ -286,14 +287,17 @@ class Restoration:
         for k in range(len(opsw)):
             prob += xij[opsw[k]] == 0
         
-        # Cyclic constraints
+        # Cyclic constraints        
+        start = timeit.default_timer()
         fault = []
-        f1 = OpenSw(fault, Linepar)
+        f1 = OpenSw(fault, Linepar, Cycles)
         loop = f1.find_all_cycles()
         for k in range(len(loop)):
             sw = loop[k]
             nSw_C =  len(sw) 
-            prob += lpSum(xij[sw[j]] for j in range(nSw_C)) <= nSw_C - 1
+            prob += lpSum(xij[sw[j]] for j in range(nSw_C)) <= nSw_C - 1        
+        stop = timeit.default_timer()
+        print('Time: ', stop - start)  
 
         # No reverse real power flow in substation
         sub = [4, 27, 34]
@@ -301,9 +305,9 @@ class Restoration:
             prob += Pija[s] >= 0
             prob += Pijb[s] >= 0
             prob += Pijc[s] >= 0
-            prob += Pija[s] <= 3000
-            prob += Pijb[s] <= 3000
-            prob += Pijc[s] <= 3000
+            prob += Pija[s] <= 4000
+            prob += Pijb[s] <= 4000
+            prob += Pijc[s] <= 4000
 
         # Single phase switch can't carry power in other phase
         # LINE.TSW568613_SW        
@@ -312,6 +316,27 @@ class Restoration:
         # LINE.TSW320328_SW
         prob += Pija[2750] == 0
         prob += Pijb[2750] == 0        
+
+        # # Hospitals and City Malls Island creation.
+        # # Once Virtual switch is closed, one islanding switch should be open
+        # prob += xij[2754] + xij[179] <= 1 
+        # prob += xij[2755] + xij[955] <= 1 
+
+        # Capcity of DGs
+        # Generator.Diesel620
+        prob += Pija[2754] + Pijb[2754] +  Pijc[2754] <= 620
+        # Generator.LNGengine100
+        prob += Pija[2755] + Pijb[2755] +  Pijc[2755] <= 100 
+        # Generator.MicroTurb
+        prob += Pija[2756] + Pijb[2756] +  Pijc[2756] <= 1100
+        # Generator.MicroTurb-4
+        prob += Pija[2757] + Pijb[2757] +  Pijc[2757] <= 200 
+        # Generator.LNGengine1800
+        prob += Pija[2758] + Pijb[2758] +  Pijc[2758] <= 1800
+        # Generator.Diesel590
+        prob += Pija[2759] + Pijb[2759] +  Pijc[2759] <= 590 
+        # Generator.SteamGen1
+        prob += Pija[2760] + Pijb[2760] +  Pijc[2760] <= 1000 
 
         print('Now solving the restoration problem.......')
         # prob.solve()
@@ -323,8 +348,9 @@ class Restoration:
         print(' Substation #1:', Pija[4].varValue, Pijb[4].varValue, Pijc[4].varValue )
         print(' Substation #2:', Pija[27].varValue, Pijb[27].varValue, Pijc[27].varValue )
         print(' Substation #3:', Pija[34].varValue, Pijb[34].varValue, Pijc[34].varValue )
-        print(' DG #1:', Pija[2754].varValue, Pijb[2754].varValue, Pijc[2754].varValue )
-        print(' Dg #2:', Pija[2755].varValue, Pijb[2755].varValue, Pijc[2755].varValue )
+        DG = list(range(2754,2761))
+        for k in range(7):
+            print('DG',DG[k],':', Pija[DG[k]].varValue, Pijb[DG[k]].varValue, Pijc[DG[k]].varValue)
         print ('........................')
         # print(' Tie Switch Flow:', Pija[2750].varValue, Pijb[2750].varValue, Pijc[2750].varValue )
         
@@ -333,10 +359,9 @@ class Restoration:
         for k in range(nEdges):
             if xij[k].varValue < 0.1:
                 op.append(k)
-        for k in range(9):
+        for k in range(16):
             if xij[No[k]].varValue > 0.5:
                 cl.append(No[k])
-        # print (cl)
         return op, cl
         # for k in range(len(No)):
         #     print(xij[No[k]].varValue)

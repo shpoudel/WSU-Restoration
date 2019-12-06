@@ -207,7 +207,7 @@ class MODEL_EQ(object):
         # print(LoadData)
         # print(sP, sQ)
         # # print (Xfmr)
-        return LoadData
+        return LoadData, Xfmr
 
 
     def Inverters(self):
@@ -292,6 +292,87 @@ class MODEL_EQ(object):
 
         # print(Inv)
         print('Inverter..')
+
+
+    def distributed_generators(self):
+        query = """
+        # SynchronousMachine - DistSyncMachine
+    PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX c:  <http://iec.ch/TC57/CIM100#>
+    SELECT ?name ?bus ?ratedS ?ratedU ?p ?q ?id ?fdrid WHERE {
+    VALUES ?fdrid {"%s"}  # 123 bus
+    ?s r:type c:SynchronousMachine.
+    ?s c:IdentifiedObject.name ?name.
+    ?s c:Equipment.EquipmentContainer ?fdr.
+    ?fdr c:IdentifiedObject.mRID ?fdrid.
+    ?s c:SynchronousMachine.ratedS ?ratedS.
+    ?s c:SynchronousMachine.ratedU ?ratedU.
+    ?s c:SynchronousMachine.p ?p.
+    ?s c:SynchronousMachine.q ?q. 
+    ?s c:IdentifiedObject.mRID ?id.
+    OPTIONAL {?smp c:SynchronousMachinePhase.SynchronousMachine ?s.
+    ?smp c:SynchronousMachinePhase.phase ?phsraw.
+    bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs) }
+    ?t c:Terminal.ConductingEquipment ?s.
+    ?t c:Terminal.ConnectivityNode ?cn. 
+    ?cn c:IdentifiedObject.name ?bus
+    }
+    GROUP by ?name ?bus ?ratedS ?ratedU ?p ?q ?id ?fdrid
+    ORDER by ?name
+        """ % self.model_mrid
+        results = self.gapps.query_data(query, timeout=60)
+        results_obj = results['data']
+        DERs = []
+        MT = results_obj['results']['bindings']
+        for d in MT:
+            message = dict(name = d['name']['value'],
+                           mrid  = d['id']['value'],
+                           bus = d['bus']['value'],
+                           ratedS = 0.001 * float(d['ratedS']['value']))
+            DERs.append(message)  
+
+    
+        query = """
+       PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX c:  <http://iec.ch/TC57/CIM100#>
+    SELECT ?name ?bus ?ratedS ?ratedU ?ipu ?ratedE ?storedE ?state ?p ?q ?id ?fdrid WHERE {
+    ?s r:type c:BatteryUnit.
+    ?s c:IdentifiedObject.name ?name.
+    ?pec c:PowerElectronicsConnection.PowerElectronicsUnit ?s.
+    VALUES ?fdrid {"%s"}
+    ?pec c:Equipment.EquipmentContainer ?fdr.
+    ?fdr c:IdentifiedObject.mRID ?fdrid.
+    ?pec c:PowerElectronicsConnection.ratedS ?ratedS.
+    ?pec c:PowerElectronicsConnection.ratedU ?ratedU.
+    ?pec c:PowerElectronicsConnection.maxIFault ?ipu.
+    ?s c:BatteryUnit.ratedE ?ratedE.
+    ?s c:BatteryUnit.storedE ?storedE.
+    ?s c:BatteryUnit.batteryState ?stateraw.
+    bind(strafter(str(?stateraw),"BatteryState.") as ?state)
+    ?pec c:PowerElectronicsConnection.p ?p.
+    ?pec c:PowerElectronicsConnection.q ?q. 
+    OPTIONAL {?pecp c:PowerElectronicsConnectionPhase.PowerElectronicsConnection ?pec.
+    ?pecp c:PowerElectronicsConnectionPhase.phase ?phsraw.
+    bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs) }
+    ?s c:IdentifiedObject.mRID ?id.
+    ?t c:Terminal.ConductingEquipment ?pec.
+    ?t c:Terminal.ConnectivityNode ?cn. 
+    ?cn c:IdentifiedObject.name ?bus
+    }
+    GROUP by ?name ?bus ?ratedS ?ratedU ?ipu ?ratedE ?storedE ?state ?p ?q ?id ?fdrid
+    ORDER by ?name
+        """ % self.model_mrid
+        results = self.gapps.query_data(query, timeout=60)
+        results_obj = results['data']
+        ESS = results_obj['results']['bindings']
+        for d in ESS:
+            message = dict(name = d['name']['value'],
+                           mrid  = d['id']['value'],
+                           bus = d['bus']['value'],
+                           ratedS = 0.001 * float(d['ratedS']['value']))
+            DERs.append(message)  
+
+        return DERs
         
     def linepar(self, Linepar):
 
@@ -345,6 +426,66 @@ class MODEL_EQ(object):
                             index = 2755,
                             from_br = 'SOURCEBUS',
                             to_br = 'M1142DER480-1',
+                            is_Switch = 1,
+                            length = 0.001,
+                            nPhase = 3,
+                            Phase = 'ABC',
+                            r = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001],
+                            x = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001])
+        Linepar.append(message)
+
+        message = dict(line = 'dgv3',
+                            index = 2756,
+                            from_br = 'SOURCEBUS',
+                            to_br = 'M2001DER-1',
+                            is_Switch = 1,
+                            length = 0.001,
+                            nPhase = 3,
+                            Phase = 'ABC',
+                            r = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001],
+                            x = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001])
+        Linepar.append(message)
+
+        message = dict(line = 'dgv4',
+                            index = 2757,
+                            from_br = 'SOURCEBUS',
+                            to_br = 'M1069DER480-1',
+                            is_Switch = 1,
+                            length = 0.001,
+                            nPhase = 3,
+                            Phase = 'ABC',
+                            r = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001],
+                            x = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001])
+        Linepar.append(message)
+
+        message = dict(line = 'dgv5',
+                            index = 2758,
+                            from_br = 'SOURCEBUS',
+                            to_br = 'M1089DER480-1',
+                            is_Switch = 1,
+                            length = 0.001,
+                            nPhase = 3,
+                            Phase = 'ABC',
+                            r = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001],
+                            x = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001])
+        Linepar.append(message)
+
+        message = dict(line = 'dgv6',
+                            index = 2759,
+                            from_br = 'SOURCEBUS',
+                            to_br = 'M1089DER480-2',
+                            is_Switch = 1,
+                            length = 0.001,
+                            nPhase = 3,
+                            Phase = 'ABC',
+                            r = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001],
+                            x = [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001])
+        Linepar.append(message)
+
+        message = dict(line = 'dgv7',
+                            index = 2760,
+                            from_br = 'SOURCEBUS',
+                            to_br = 'M1026CHP-1',
                             is_Switch = 1,
                             length = 0.001,
                             nPhase = 3,

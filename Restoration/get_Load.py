@@ -12,9 +12,10 @@ class PowerData(object):
     """
     WSU Resilient Restoration, Get load data from feeder
     """
-    def __init__(self, msr_mrids_load, sim_output):
+    def __init__(self, msr_mrids_load, sim_output, xfmr):
         self.meas_load = msr_mrids_load
         self.output = sim_output
+        self.xfmr = xfmr
         
     def demand(self):
         data1 = self.meas_load
@@ -54,17 +55,42 @@ class PowerData(object):
                 l['kVaR'] = d1['kVaR'] + d2['kVaR']
         
         Demand = [l for d, l in enumerate(Demand) if d % 2 == 0]
+
+
+        for ld in Demand:
+            node = ld['bus'].strip('s')
+            # Find this node in Xfrm to_br
+            for tr in self.xfmr:
+                sec = tr['bus2']
+                if sec == node:
+                    # Transfer this load to primary and change the node name
+                    ld['bus'] = tr['bus1'].upper()
+
+
         sP = 0
         sQ = 0
+        sNN_P = 0
+        sNN_Q = 0
         for d in Demand:
             sP += d['kW']
             sQ += d['kVaR']
-        print('The total real and reactive demand is:', sP, sQ)
-        print('.....................................................')
-        print('\n')
+            if 'M200' in d['bus']:
+                sNN_P += d['kW']   
+                sNN_Q += d['kVaR']   
         
-        with open('PlatformD.json', 'w') as json_file:
-            json.dump(Demand, json_file)
+        # If platform gave random load for New neighborhood, then use the static loads
+        if sNN_P == 0:
+            sNN_P = 1121.6
+            sNN_Q = 635.64
+
+        print('The total real and reactive demand is:', sP, sQ, sNN_P)
+        print('.....................................................')
+        print('\n')      
+
+        return Demand, sNN_P, sNN_Q
+        # with open('PlatformD.json', 'w') as json_file:
+        #     json.dump(Demand, json_file)
+
 
         # Transferring the load to Primary side for solving the restoration. No triplex line in optimization model
 

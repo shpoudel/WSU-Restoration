@@ -48,6 +48,11 @@ class Topology(object):
         print('The total number of open switches:', len(set(Loadbreak)))
         print(timestamp, set(Loadbreak))
 
+        # Is New neighborhood islanded, if yes, then dispatch the signal
+        dispatch = 0
+        if 'ln2000001_sw' in Loadbreak:
+            dispatch = 1
+
         # Create a message dict to store the real time topology:
         message = dict (when = timestamp, op_sw = set(Loadbreak))
         TOP.append(message)
@@ -62,7 +67,7 @@ class Topology(object):
         flag_event = 0
         if self._alarm == 1:
             flag_event = 1
-        return TOP, flag_event, Loadbreak
+        return TOP, flag_event, Loadbreak, dispatch
 
     def locate_fault(self, LoadBreak):
         G = nx.Graph()

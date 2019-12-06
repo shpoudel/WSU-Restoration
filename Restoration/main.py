@@ -77,7 +77,7 @@ class SwitchingActions(object):
     message to the simulation_input_topic with the forward and reverse difference specified.
     """
 
-    def __init__(self, simulation_id, gridappsd_obj, switches, msr_mrids_loadsw, msr_mrids_demand, demand, line):
+    def __init__(self, simulation_id, gridappsd_obj, switches, msr_mrids_loadsw, msr_mrids_demand, demand, xfmr, line, DERs, Cycles):
         """ Create a ``SwitchingActions`` object
 
         This object should be used as a subscription callback from a ``GridAPPSD``
@@ -116,6 +116,10 @@ class SwitchingActions(object):
         self._alarm = 0
         self._faulted = []
         self._iso_timestamp = 10000000000
+        self.DERs = DERs
+        self._Island = 0
+        self.xfmr = xfmr
+        self.Cycles =  Cycles
         _log.info("Building cappacitor list")
 
         
@@ -163,7 +167,7 @@ class SwitchingActions(object):
             if self.flag_iso == 1 and (timestamp - self._iso_timestamp) > 6 :
                 print('Modeling the optimization problem.........')
                 res = Restoration()
-                op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw)
+                op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw, self.Cycles)
                 sw_oc = SW_MRID(op, cl, self.switches, self.LineData)
                 op_mrid, cl_mrid = sw_oc.mapping_res()
 
@@ -186,7 +190,7 @@ class SwitchingActions(object):
 
             # Checking the topology everytime communicating with the platform
             top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData, self._alarm, self._faulted)
-            TOP, flag_event, LoadBreak = top.curr_top()
+            TOP, flag_event, LoadBreak, dispatch = top.curr_top()
             self.TOP = TOP
 
             # Locate fault
@@ -194,15 +198,15 @@ class SwitchingActions(object):
                 flag_fault, fault = top.locate_fault(LoadBreak)
 
             # Get consumer loads from platform
-            ld = PowerData(self.msr_mrids_demand, message)
-            ld.demand()
+            ld = PowerData(self.msr_mrids_demand, message, self.xfmr)
+            Feeder_PQ, Neigh_P, Neigh_Q = ld.demand()
 
             # Isolate and restore the fault
             if flag_fault == 1:
                 # Isolate the fault 
                 opsw = []
                 for f in fault:
-                    pr = OpenSw(f, self.LineData)
+                    pr = OpenSw(f, self.LineData,  self.Cycles)
                     op = pr.fault_isolation()
                     opsw.append(op)
                 opsw = [item for sublist in opsw for item in sublist]
@@ -221,6 +225,68 @@ class SwitchingActions(object):
                 self._iso_timestamp = timestamp
                 self.flag_iso = 1
                 self._alarm = 0
+            
+            # If New neighborhood switch is opened, we will dispatch MTs and ESS
+            # This is a special case of DER dispatch
+            # DERs = ['m2001-mt1', 'm2001-mt2', 'm2001-mt3','m2001-ess1', 'm2001-ess2']
+
+            totP =  200000 + 200000 + 250000 + 250000
+            totQ = 96856 + 96856
+            Neigh_P = Neigh_P * 1000
+            Neigh_Q = Neigh_Q * 1000
+
+            if dispatch == 1 and self._Island == 0:
+                for der in self.DERs:
+                    if der['bus'] == 'm2001-mt2':
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.p", min((200000/totP) * Neigh_P, 200000), 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.q", min((96856/totQ) * Neigh_Q, 96856), 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    if der['bus'] == 'm2001-mt3':
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.p", min((200000/totP) * Neigh_P, 200000), 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.q", min((96856/totQ) * Neigh_Q, 96856), 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    if der['bus'] == 'm2001-ess1':
+                        self._open_diff.add_difference(der['mrid'], "PowerElectronicsConnection.p", min((250000/totP) * Neigh_P, 250000), 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    if der['bus'] == 'm2001-ess2':
+                        self._open_diff.add_difference(der['mrid'], "PowerElectronicsConnection.p", min((250000/totP) * Neigh_P, 250000), 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                self._Island = 1
+
+            if dispatch == 0 and self._Island == 1:
+                for der in self.DERs:
+                    if der['bus'] == 'm2001-mt2':
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.p", 0, 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.q", 0, 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    if der['bus'] == 'm2001-mt3':
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.p", 0, 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.q", 0, 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    if der['bus'] == 'm2001-ess1':
+                        self._open_diff.add_difference(der['mrid'], "PowerElectronicsConnection.p", 0, 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                    if der['bus'] == 'm2001-ess2':
+                        self._open_diff.add_difference(der['mrid'], "PowerElectronicsConnection.p", 0, 0)
+                        msg = self._open_diff.get_message()
+                        self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                self._Island = 0
+
 
 # class Alarm(object):
 #     """ A simple class that handles publishing forward and reverse differences
@@ -271,7 +337,10 @@ def _main():
     obj_msr_loadsw, obj_msr_demand = query.meas_mrids()
     print('Get Object MRIDS.... \n')
     switches = query.get_switches_mrids()
-    LoadData = query.distLoad()
+    LoadData, Xfmr = query.distLoad()
+    DERs = query.distributed_generators()
+
+    # print(DERs)
     query.Inverters()
     sP = 0.
     sQ = 0.
@@ -286,25 +355,27 @@ def _main():
         line = json.load(read_file)
     LineData = query.linepar(line)
 
+    with open('Cycles.json', 'r') as read_file:
+        Cycles = json.load(read_file)
+
     #.....................................................................
     # Checking isolation and restoration before starting the visualization
-    # opsw = []
-    # fault = ['M1026354', 'M1047513']
+    opsw = []
+    # fault = ['N1141478', 'M3032977']
     # for f in fault:
-    #     pr = OpenSw(f, line)
+    #     pr = OpenSw(f, line, Cycles)
     #     op = pr.fault_isolation()
     #     opsw.append(op)
     # opsw = [item for sublist in opsw for item in sublist]
     # print(opsw)
     # res = Restoration()
-    # op, cl, = res.res9500(line, LoadData, opsw)
+    # op, cl, = res.res9500(line, LoadData, opsw, Cycles)
     # print (cl)
     # .....................................................................
 
-
     print("Initialize..... \n")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
-    obj_msr_loadsw, obj_msr_demand, LoadData, LineData)
+    obj_msr_loadsw, obj_msr_demand, LoadData, Xfmr, LineData, DERs, Cycles)
     print("Now subscribing....")
     # alarms = Alarm()   
     gapps.subscribe(listening_to_topic, toggler)

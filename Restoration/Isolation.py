@@ -13,7 +13,7 @@ class OpenSw(object):
     """
     Isolate the fault
     """
-    def __init__(self, fault, LineSW):
+    def __init__(self, fault, LineSW, Cycles):
         """
         Fault Isolation class.
         Parameters
@@ -23,6 +23,7 @@ class OpenSw(object):
         """
         self.fault = fault
         self.LineSW = LineSW
+        self.cycles = Cycles
 
     def fault_isolation(self):   
         """
@@ -31,7 +32,9 @@ class OpenSw(object):
         nor_open = ['ln0653457_sw','v7173_48332_sw', 'tsw803273_sw', 'a333_48332_sw','tsw320328_sw',\
                    'a8645_48332_sw','tsw568613_sw', 'wf856_48332_sw', 'wg127_48332_sw']
 
-        G = nx.Graph()        
+        G = nx.Graph()  
+
+        # Donot add DGs in fault isolation      
         # For isolation take a meshed network
         for l in self.LineSW:
             G.add_edge(l['from_br'], l['to_br'])
@@ -86,75 +89,94 @@ class OpenSw(object):
         return ind
     
 
-    def find_all_cycles(self, source=None, cycle_length_limit=None):
-        G = nx.Graph()
-        G = nx.Graph()
-        nor_open = ['wg127_48332_sw']
-        for l in self.LineSW:
-        # if l['line'] not in nor_open:
-            G.add_edge(l['from_br'], l['to_br'])
-        if source is None:
-            # produce edges for all components
-            nodes=[list(i)[0] for i in nx.connected_components(G)]            
-        else:
-            # produce edges for components with source
-            nodes=[source]
-        # extra variables for cycle detection:
-        cycle_stack = []
-        output_cycles = set()
+    def find_all_cycles(self):
+    # def find_all_cycles(self, source=None, cycle_length_limit=None):
+    #     G = nx.Graph()
+    #     G = nx.Graph()
+    #     nor_open = ['wg127_48332_sw']
+    #     for l in self.LineSW:
+    #     # if l['line'] not in nor_open:
+    #         G.add_edge(l['from_br'], l['to_br'])
+    #     if source is None:
+    #         # produce edges for all components
+    #         nodes=[list(i)[0] for i in nx.connected_components(G)]            
+    #     else:
+    #         # produce edges for components with source
+    #         nodes=[source]
+    #     # extra variables for cycle detection:
+    #     cycle_stack = []
+    #     output_cycles = set()
     
-        def get_hashable_cycle(cycle):
-            m = min(cycle)
-            mi = cycle.index(m)
-            mi_plus_1 = mi + 1 if mi < len(cycle) - 1 else 0
-            if cycle[mi-1] > cycle[mi_plus_1]:
-                result = cycle[mi:] + cycle[:mi]
-            else:
-                result = list(reversed(cycle[:mi_plus_1])) + list(reversed(cycle[mi_plus_1:]))
-            return tuple(result)
+    #     def get_hashable_cycle(cycle):
+    #         m = min(cycle)
+    #         mi = cycle.index(m)
+    #         mi_plus_1 = mi + 1 if mi < len(cycle) - 1 else 0
+    #         if cycle[mi-1] > cycle[mi_plus_1]:
+    #             result = cycle[mi:] + cycle[:mi]
+    #         else:
+    #             result = list(reversed(cycle[:mi_plus_1])) + list(reversed(cycle[mi_plus_1:]))
+    #         return tuple(result)
         
-        for start in nodes:
-            if start in cycle_stack:
-                continue
-            cycle_stack.append(start)
+    #     for start in nodes:
+    #         if start in cycle_stack:
+    #             continue
+    #         cycle_stack.append(start)
             
-            stack = [(start,iter(G[start]))]
-            while stack:
-                parent,children = stack[-1]
-                try:
-                    child = next(children)
+    #         stack = [(start,iter(G[start]))]
+    #         while stack:
+    #             parent,children = stack[-1]
+    #             try:
+    #                 child = next(children)
                     
-                    if child not in cycle_stack:
-                        cycle_stack.append(child)
-                        stack.append((child,iter(G[child])))
-                    else:
-                        i = cycle_stack.index(child)
-                        if i < len(cycle_stack) - 2: 
-                            output_cycles.add(get_hashable_cycle(cycle_stack[i:]))
+    #                 if child not in cycle_stack:
+    #                     cycle_stack.append(child)
+    #                     stack.append((child,iter(G[child])))
+    #                 else:
+    #                     i = cycle_stack.index(child)
+    #                     if i < len(cycle_stack) - 2: 
+    #                         output_cycles.add(get_hashable_cycle(cycle_stack[i:]))
                     
-                except StopIteration:
-                    stack.pop()
-                    cycle_stack.pop()
+    #             except StopIteration:
+    #                 stack.pop()
+    #                 cycle_stack.pop()
 
-        output_cycles = list(output_cycles)
+    #     print(len(output_cycles))
+    #     output_cycles = list(output_cycles)
+    #     Cycles = []
+    #     for k in range(len(output_cycles)):
+    #         message = dict(Index = k,
+    #                         loop = output_cycles[k])
+    #         Cycles.append(message)
+    #     with open('Cycles.json', 'w') as fp:
+    #         json.dump(Cycles, fp)
+
         open_for_radial = []
         open_radial = []
         radial = []
-        for k in range(len(output_cycles)):
-            loop = output_cycles[k]
+        onlySW = [l for l in self.LineSW if l['is_Switch'] == 1]
+
+
+
+        # print(type(output_cycles))
+
+
+
+        for k in self.cycles :
+            loop = k['loop']
             res = []
             sw_cycle = []
-            for i in range(len(loop)):                
+            for i in range(len(loop)):           
                 j = (i + 1) % len(loop)
                 edge = {loop[i], loop[j]}
-                for l in self.LineSW:
-                    if l['is_Switch']:
-                        check = set([l['from_br'], l['to_br']])
-                        if check == edge:
-                            res.append(check)
-                            sw_cycle.append(l['index'])
+                for l in onlySW:
+                    # if l['is_Switch']:
+                    check = set([l['from_br'], l['to_br']])
+                    if check == edge:
+                        res.append(check)
+                        sw_cycle.append(l['index'])
             open_for_radial.append(res)
             radial.append(sw_cycle)
+
         return radial
 
     
