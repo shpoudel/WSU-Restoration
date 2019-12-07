@@ -65,7 +65,25 @@ class MODEL_EQ(object):
         "requestType": "QUERY_OBJECT_MEASUREMENTS",
         "resultFormat": "JSON",
         "objectType": "LoadBreakSwitch"}     
-        obj_msr_loadsw = self.gapps.get_response(self.topic, message, timeout=180)   
+        obj_msr_loadsw = self.gapps.get_response(self.topic, message, timeout=180) 
+        # print(obj_msr_loadsw)
+        # Get measurement MRIDS for DERs
+        message = {
+        "modelId": self.model_mrid,
+        "requestType": "QUERY_OBJECT_MEASUREMENTS",
+        "resultFormat": "JSON",
+        "objectType": "SynchronousMachine"}     
+        obj_msr_sync = self.gapps.get_response(self.topic, message, timeout=180)   
+        # print(obj_msr_sync)
+
+         # Get measurement MRIDS for DERs
+        message = {
+        "modelId": self.model_mrid,
+        "requestType": "QUERY_OBJECT_MEASUREMENTS",
+        "resultFormat": "JSON",
+        "objectType": "PowerElectronicsConnection"}     
+        obj_msr_ess = self.gapps.get_response(self.topic, message, timeout=180)   
+        # print(obj_msr_ess)
 
         # Get measurement MRIDS for kW consumptions at each node
         message = {
@@ -339,7 +357,13 @@ class MODEL_EQ(object):
     ?s r:type c:BatteryUnit.
     ?s c:IdentifiedObject.name ?name.
     ?pec c:PowerElectronicsConnection.PowerElectronicsUnit ?s.
-    VALUES ?fdrid {"%s"}
+    # feeder selection options - if all commented out, query matches all feeders
+    #VALUES ?fdrid {"_C1C3E687-6FFD-C753-582B-632A27E28507"}  # 123 bus
+    #VALUES ?fdrid {"_49AD8E07-3BF9-A4E2-CB8F-C3722F837B62"}  # 13 bus
+    #VALUES ?fdrid {"_5B816B93-7A5F-B64C-8460-47C17D6E4B0F"}  # 13 bus assets
+    #VALUES ?fdrid {"_4F76A5F9-271D-9EB8-5E31-AA362D86F2C3"}  # 8500 node
+    #VALUES ?fdrid {"_67AB291F-DCCD-31B7-B499-338206B9828F"}  # J1
+    VALUES ?fdrid {"%s"}  # R2 12.47 3
     ?pec c:Equipment.EquipmentContainer ?fdr.
     ?fdr c:IdentifiedObject.mRID ?fdrid.
     ?pec c:PowerElectronicsConnection.ratedS ?ratedS.

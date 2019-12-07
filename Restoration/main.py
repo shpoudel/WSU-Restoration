@@ -103,6 +103,9 @@ class SwitchingActions(object):
         self._last_toggle_on = False
         self._open_diff = DifferenceBuilder(simulation_id)
         self._close_diff = DifferenceBuilder(simulation_id)
+        self._mt_P = DifferenceBuilder(simulation_id)
+        self._mt_Q = DifferenceBuilder(simulation_id)
+        self._ess_P = DifferenceBuilder(simulation_id)
         self._publish_to_topic = simulation_input_topic(simulation_id)
         self.msr_mrids_loadsw = msr_mrids_loadsw
         self.msr_mrids_demand = msr_mrids_demand
@@ -164,7 +167,7 @@ class SwitchingActions(object):
             flag_event = 0
 
             # Restoration to be done only after isolation
-            if self.flag_iso == 1 and (timestamp - self._iso_timestamp) > 6 :
+            if self.flag_iso == 1 and (timestamp - self._iso_timestamp) > 15 :
                 print('Modeling the optimization problem.........')
                 res = Restoration()
                 op, cl, = res.res9500(self.LineData, self.DemandData, self._isosw, self.Cycles)
@@ -176,14 +179,14 @@ class SwitchingActions(object):
                     self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                     msg = self._open_diff.get_message()
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-                    # self._open_diff.clear()
+                    self._open_diff.clear()
 
                 for sw_mrid in cl_mrid:
-                    self._open_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
-                    msg = self._open_diff.get_message()
+                    self._close_diff.add_difference(sw_mrid, "Switch.open", 0, 1)
+                    msg = self._close_diff.get_message()
                     print(msg)
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))  
-                    # self._open_diff.clear()
+                    self._close_diff.clear()
                 self.flag_iso = 0
                 self._alarm = 0
                 print('Event successfully restored......')
@@ -218,7 +221,7 @@ class SwitchingActions(object):
                     self._open_diff.add_difference(sw_mrid, "Switch.open", 1, 0)
                     msg = self._open_diff.get_message()
                     self._gapps.send(self._publish_to_topic, json.dumps(msg))
-                    # self._open_diff.clear()
+                    self._open_diff.clear()
                 
                 # Until Isolation is being performed, do not call optimization            
                 self._isosw = opsw
@@ -238,27 +241,38 @@ class SwitchingActions(object):
             if dispatch == 1 and self._Island == 0:
                 for der in self.DERs:
                     if der['bus'] == 'm2001-mt2':
-                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.p", min((200000/totP) * Neigh_P, 200000), 0)
-                        msg = self._open_diff.get_message()
+                        self._mt_P.add_difference(der['mrid'], "RotatingMachine.p", min((200000/totP) * Neigh_P, 200000), 0)
+                        msg = self._mt_P.get_message()
                         self._gapps.send(self._publish_to_topic, json.dumps(msg))
-                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.q", min((96856/totQ) * Neigh_Q, 96856), 0)
-                        msg = self._open_diff.get_message()
+                        self._mt_Q.add_difference(der['mrid'], "RotatingMachine.q", min((96856/totQ) * Neigh_Q, 96856), 0)
+                        msg = self._mt_Q.get_message()
                         self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._mt_P.clear()
+                        self._mt_Q.clear()
+
                     if der['bus'] == 'm2001-mt3':
-                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.p", min((200000/totP) * Neigh_P, 200000), 0)
-                        msg = self._open_diff.get_message()
+                        self._mt_P.add_difference(der['mrid'], "RotatingMachine.p", min((200000/totP) * Neigh_P, 200000), 0)
+                        msg = self._mt_P.get_message()
                         self._gapps.send(self._publish_to_topic, json.dumps(msg))
-                        self._open_diff.add_difference(der['mrid'], "RotatingMachine.q", min((96856/totQ) * Neigh_Q, 96856), 0)
-                        msg = self._open_diff.get_message()
+                        self._mt_Q.add_difference(der['mrid'], "RotatingMachine.q", min((96856/totQ) * Neigh_Q, 96856), 0)
+                        msg = self._mt_Q.get_message()
                         self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._mt_P.clear()
+                        self._mt_Q.clear()
+                        
                     if der['bus'] == 'm2001-ess1':
-                        self._open_diff.add_difference(der['mrid'], "PowerElectronicsConnection.p", min((250000/totP) * Neigh_P, 250000), 0)
-                        msg = self._open_diff.get_message()
+                        self._ess_P.add_difference(der['mrid'], "PowerElectronicsConnection.p", min((250000/totP) * Neigh_P, 250000), 0)
+                        msg = self._ess_P.get_message()
+                        print(msg)
                         self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._ess_P.clear()
+
                     if der['bus'] == 'm2001-ess2':
-                        self._open_diff.add_difference(der['mrid'], "PowerElectronicsConnection.p", min((250000/totP) * Neigh_P, 250000), 0)
-                        msg = self._open_diff.get_message()
+                        self._ess_P.add_difference(der['mrid'], "PowerElectronicsConnection.p", min((250000/totP) * Neigh_P, 250000), 0)
+                        msg = self._ess_P.get_message()
+                        print(msg)
                         self._gapps.send(self._publish_to_topic, json.dumps(msg))
+                        self._ess_P.clear()
                 self._Island = 1
 
             if dispatch == 0 and self._Island == 1:
@@ -340,7 +354,7 @@ def _main():
     LoadData, Xfmr = query.distLoad()
     DERs = query.distributed_generators()
 
-    # print(DERs)
+    print(DERs)
     query.Inverters()
     sP = 0.
     sQ = 0.
