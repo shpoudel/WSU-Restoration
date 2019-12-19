@@ -84,10 +84,16 @@ class Topology(object):
                 previous = top['op_sw']
 
         op_fault  = curr_open - previous
+
+        # print('************************')
+        # print(op_fault)
+        # print(previous)
+        # print('************************')
         
+        DGS = ['dgv1','dgv2','dgv3', 'dgv4','dgv5', 'dgv6','dgv7']
         # Here I know what switches are open but need to locate fault in more generalized way..
         for l in LineData:
-            if l['line'] not in previous:
+            if l['line'] not in previous and l['line'] not in DGS:
                 G.add_edge(l['from_br'], l['to_br'])
         T = list(nx.bfs_tree(G, source = 'SOURCEBUS').edges())
 
@@ -103,6 +109,7 @@ class Topology(object):
                         fault.append(t[1])
                         flag_fault = 1
         # print (fault)
+        print(fault)
         return flag_fault, fault
         # Check for fault if topology changes and alarm is received:
 

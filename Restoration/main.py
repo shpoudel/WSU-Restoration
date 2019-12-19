@@ -354,7 +354,7 @@ def _main():
     LoadData, Xfmr = query.distLoad()
     DERs = query.distributed_generators()
 
-    print(DERs)
+    # print(DERs)
     query.Inverters()
     sP = 0.
     sQ = 0.
@@ -375,7 +375,7 @@ def _main():
     #.....................................................................
     # Checking isolation and restoration before starting the visualization
     opsw = []
-    # fault = ['N1141478', 'M3032977']
+    # fault = ['M1047507']
     # for f in fault:
     #     pr = OpenSw(f, line, Cycles)
     #     op = pr.fault_isolation()

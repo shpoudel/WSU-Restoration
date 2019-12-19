@@ -83,7 +83,7 @@ class PowerData(object):
             sNN_P = 1121.6
             sNN_Q = 635.64
 
-        print('The total real and reactive demand is:', sP, sQ, sNN_P)
+        print('The total real and reactive demand is:', sP, sQ, sNN_P, sNN_Q)
         print('.....................................................')
         print('\n')      
 
