@@ -42,9 +42,10 @@ class Topology(object):
             if d1['measid'] in meas_value:
                 v = d1['measid']
                 p = meas_value[v]
+                # print(p)
                 if p['value'] == 0:
                     Loadbreak.append(d1['eqname'])
-        print('.......................................')
+        print('.....................................................')
         print('The total number of open switches:', len(set(Loadbreak)))
         print(timestamp, set(Loadbreak))
 
@@ -70,6 +71,7 @@ class Topology(object):
         return TOP, flag_event, Loadbreak, dispatch
 
     def locate_fault(self, LoadBreak):
+        
         G = nx.Graph()
         TOP = self.TOP
         data2 = self.output

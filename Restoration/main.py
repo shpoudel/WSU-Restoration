@@ -77,7 +77,7 @@ class SwitchingActions(object):
     message to the simulation_input_topic with the forward and reverse difference specified.
     """
 
-    def __init__(self, simulation_id, gridappsd_obj, switches, msr_mrids_loadsw, msr_mrids_demand, demand, xfmr, line, DERs, Cycles):
+    def __init__(self, simulation_id, gridappsd_obj, switches, msr_mrids_loadsw, msr_mrids_demand, demand, xfmr, line, DERs, Cycles, obj_msr_inv, obj_msr_sync):
         """ Create a ``SwitchingActions`` object
 
         This object should be used as a subscription callback from a ``GridAPPSD``
@@ -123,6 +123,9 @@ class SwitchingActions(object):
         self._Island = 0
         self.xfmr = xfmr
         self.Cycles =  Cycles
+        self.obj_msr_inv = obj_msr_inv
+        self.obj_msr_sync = obj_msr_sync
+        self.constant = 5
         _log.info("Building cappacitor list")
 
         
@@ -201,8 +204,14 @@ class SwitchingActions(object):
                 flag_fault, fault = top.locate_fault(LoadBreak)
 
             # Get consumer loads from platform
-            ld = PowerData(self.msr_mrids_demand, message, self.xfmr)
+            ld = PowerData(self.msr_mrids_demand, message, self.xfmr, self.obj_msr_inv, self.obj_msr_sync)
             Feeder_PQ, Neigh_P, Neigh_Q = ld.demand()
+
+            # Subscrive to DER and Inverter Output at every 5 secs
+            if self.constant % 5 == 0:
+                Neigh_PV = ld.pvinv()
+                der_output = ld.DER_dispatch()
+            self.constant += 1
 
             # Isolate and restore the fault
             if flag_fault == 1:
@@ -348,14 +357,14 @@ def _main():
     # Run queries to get model information
     print('Get Model Information..... \n')   
     query = MODEL_EQ(gapps, model_mrid, topic)
-    obj_msr_loadsw, obj_msr_demand = query.meas_mrids()
+    obj_msr_loadsw, obj_msr_demand, obj_msr_inv, obj_msr_sync = query.meas_mrids()
     print('Get Object MRIDS.... \n')
     switches = query.get_switches_mrids()
     LoadData, Xfmr = query.distLoad()
     DERs = query.distributed_generators()
 
     # print(DERs)
-    query.Inverters()
+    pv_inverters = query.Inverters()
     sP = 0.
     sQ = 0.
     for l in LoadData:
@@ -389,7 +398,7 @@ def _main():
 
     print("Initialize..... \n")
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
-    obj_msr_loadsw, obj_msr_demand, LoadData, Xfmr, LineData, DERs, Cycles)
+    obj_msr_loadsw, obj_msr_demand, LoadData, Xfmr, LineData, DERs, Cycles, obj_msr_inv, obj_msr_sync)
     print("Now subscribing....")
     # alarms = Alarm()   
     gapps.subscribe(listening_to_topic, toggler)

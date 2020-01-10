@@ -66,24 +66,28 @@ class MODEL_EQ(object):
         "resultFormat": "JSON",
         "objectType": "LoadBreakSwitch"}     
         obj_msr_loadsw = self.gapps.get_response(self.topic, message, timeout=180) 
-        # print(obj_msr_loadsw)
-        # Get measurement MRIDS for DERs
+        
+        # Get measurement MRIDS for DERs. The measid for DERs are not returning any results so using AC line segment
         message = {
         "modelId": self.model_mrid,
         "requestType": "QUERY_OBJECT_MEASUREMENTS",
         "resultFormat": "JSON",
-        "objectType": "SynchronousMachine"}     
+        "objectType": "ACLineSegment"}     
         obj_msr_sync = self.gapps.get_response(self.topic, message, timeout=180)   
+        obj_msr_sync = obj_msr_sync['data']
+        der_line = ['ln5002chp-1','ln6108125-4','ln2001der-1','ln2001der-2','ln6259999-1','ln6311089-1',\
+                    'ln2001der-3','ln2001der-4','ln2001der-5','ln5542283-1','ln5957500-1','ln1047pvfrm-1']
+        obj_msr_sync = [d for d in obj_msr_sync if d['type'] != 'PNV' and d['eqname'] in der_line]
         # print(obj_msr_sync)
 
-         # Get measurement MRIDS for DERs
+         # Get measurement MRIDS for Inverters
         message = {
         "modelId": self.model_mrid,
         "requestType": "QUERY_OBJECT_MEASUREMENTS",
         "resultFormat": "JSON",
         "objectType": "PowerElectronicsConnection"}     
-        obj_msr_ess = self.gapps.get_response(self.topic, message, timeout=180)   
-        # print(obj_msr_ess)
+        obj_msr_inv = self.gapps.get_response(self.topic, message, timeout=180)   
+        # print(obj_msr_inv)
 
         # Get measurement MRIDS for kW consumptions at each node
         message = {
@@ -92,8 +96,9 @@ class MODEL_EQ(object):
             "resultFormat": "JSON",
             "objectType": "EnergyConsumer"}     
         obj_msr_demand = self.gapps.get_response(self.topic, message, timeout=180)
+
         print('Gathering Measurement MRIDS.... \n')
-        return obj_msr_loadsw, obj_msr_demand
+        return obj_msr_loadsw, obj_msr_demand, obj_msr_inv, obj_msr_sync
     
 
     def distLoad(self):
@@ -233,7 +238,7 @@ class MODEL_EQ(object):
     PREFIX r: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     PREFIX c: <http://iec.ch/TC57/CIM100#>
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-    SELECT ?inverter_mrid ?inverter_name ?inverter_mode ?inverter_max_q ?inverter_min_q ?inverter_p ?inverter_q ?inverter_rated_s ?inverter_rated_u ?phase_mrid ?phase_name ?phase_p ?phase_q 
+    SELECT ?inverter_mrid ?bus ?inverter_name ?inverter_mode ?inverter_max_q ?inverter_min_q ?inverter_p ?inverter_q ?inverter_rated_s ?inverter_rated_u ?phase_mrid ?phase_name ?phase_p ?phase_q 
     WHERE {
     # Update for your feeder, or remove for all feeders.
     VALUES ?feeder_mrid {"%s"}
@@ -258,10 +263,12 @@ class MODEL_EQ(object):
     ?pecp c:PowerElectronicsConnectionPhase.p ?phase_p.
     ?pecp c:PowerElectronicsConnectionPhase.q ?phase_q.
     ?pecp c:PowerElectronicsConnectionPhase.phase
-    ?phsraw bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs)
+    ?phsraw bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs)  }
+    ?t c:Terminal.ConductingEquipment ?s.
+    ?t c:Terminal.ConnectivityNode ?cn.
+    ?cn c:IdentifiedObject.name ?bus
     }
-    }
-    GROUP BY ?inverter_mrid ?inverter_name ?inverter_rated_s ?inverter_rated_u ?inverter_p ?inverter_q ?phase_mrid ?phase_name ?phase_p ?phase_q ?inverter_mode ?inverter_max_q ?inverter_min_q
+    GROUP BY ?inverter_mrid ?bus ?inverter_name ?inverter_rated_s ?inverter_rated_u ?inverter_p ?inverter_q ?phase_mrid ?phase_name ?phase_p ?phase_q ?inverter_mode ?inverter_max_q ?inverter_min_q
     ORDER BY ?inverter_mrid
         """ % self.model_mrid
         results = self.gapps.query_data(query, timeout=60)
@@ -273,6 +280,7 @@ class MODEL_EQ(object):
             message = dict(name = i['inverter_name']['value'],
                         mrid  = i['inverter_mrid']['value'],
                         measid = [],
+                        bus = i['bus']['value'],
                         ratedS = 0.001 * float(i['inverter_rated_s']['value']),
                         ratedP = 0.001 * float(i['inverter_p']['value']))
             Inv.append(message)   
@@ -306,7 +314,7 @@ class MODEL_EQ(object):
             mrid  = im['inverter_mrid']['value']
             for i in Inv:
                 if i['mrid'] == mrid:
-                    i['measid'] = im['meas_mrid']['value']
+                    i['measid'].append(im['meas_mrid']['value'])
 
         # print(Inv)
         print('Inverter..')
