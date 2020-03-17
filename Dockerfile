@@ -33,7 +33,7 @@ COPY . .
 # Use a symbolic link to the sample app rather than having to
 # mount it at run time (note can still be overriden in docker-compose file)
 RUN ln -s /usr/src/gridappsd-restoration/wsu_res_app.config /appconfig
-# CMD cd /home/gridappsd/cplex/cplex/python/2.7/x86-64_linux; sudo python setup.py install ; cd /usr/src/gridappsd-restoration ; python /usr/src/gridappsd-python/register_app.py
+# CMD cd /opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux/ ; python setup.py install
 
 
 
