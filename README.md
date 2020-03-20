@@ -27,7 +27,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     depends_on:
       - gridappsd   
       
-    # Adjust the CPLEX path based on the version you have
+    # Adjust the CPLEX version based on which you have
     ````
     
 
@@ -37,7 +37,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     osboxes@osboxes> cd gridappsd-docker
     osboxes@osboxes> ./run.sh
     
-    # you will now be inside the container, the following starts gridappsd
+    # You will now be inside the container, the following starts gridappsd
     
     gridappsd@f4ede7dacb7d:/gridappsd$ ./run-gridappsd.sh
     
