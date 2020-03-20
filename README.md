@@ -62,7 +62,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     # The following runs the application from terminal
     
     root@1b762c641f24:/usr/src/gridappsd-restoration# cd Restoration
-    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py [sim_id] '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'    
+    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py [simulation_ID] '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'    
     ````
     
 1.  Start the platform
@@ -70,7 +70,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     ```` console
     # At this point, we are ready to start the platform using browser: localhost:8080/ 
     
-    # Run the platform and take the simulation ID from the browser to Step 4 for running the application in the terminal.
+    # Run the platform and take the [simulation_ID] from the browser to Step 4 for running the application in the terminal.
     
      ````
      
