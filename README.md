@@ -66,7 +66,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     ````
 1.  Start the platform
 
-```` console
+    ```` console
     # At this point, we are ready to start the platform using browser: localhost:8080/ 
     
     # Run the platform and take the simulation ID from the browser to Step 4 for running the application in the terminal.
