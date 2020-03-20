@@ -41,13 +41,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     
     gridappsd@f4ede7dacb7d:/gridappsd$ ./run-gridappsd.sh
     
-    ````
-1.  Install cplex inside the container
-
-    ```` console
-    
-    
-    ````    
+    ```` 
 
 1.  Run the application container
 
@@ -56,19 +50,31 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     osboxes@osboxes> docker exec -it gridappsddocker_wsu_res_app_1 bash
     
     # Once you are inside the container, the following installs CPLEX to be used by the application 
+    
     root@1b762c641f24:/usr/src/gridappsd-restoration# cd /opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux/ ; python setup.py install
     
     # Note that the python version supported by CPLEX_Studio129 is 3.6. If you have a different version of CPLEX, it might require different version of python for interface. In such a case, make sure the application container has correct version of python installed.
     
-    # Now come back to the application container. The following runs the application from terminal
-    root@1b762c641f24:/opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux# cd /usr/src/gridappsd-restoration
-    root@1b762c641f24:/usr/src/gridappsd-restoration# cd Restoration
-    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py [sim_id] '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'
-
+    # Next, start the application terminal again to run the application from terminal
     
+    root@1b762c641f24:/opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux# cd /usr/src/gridappsd-restoration
+    
+    # The following runs the application from terminal
+    
+    root@1b762c641f24:/usr/src/gridappsd-restoration# cd Restoration
+    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py [sim_id] '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'    
+    ````
+1.  Start the platform
+
+```` console
+    # At this point, we are ready to start the platform using browser: localhost:8080/ 
+    
+    # Run the platform and take the simulation ID from the browser to Step 4 for running the application in the terminal.
+    
+    # Next to start the application through the viz follow the directions here: https://gridappsd.readthedocs.io/en/latest/using_gridappsd/index.html#start-gridapps-d-platform
+
     ````
 
-Next to start the application through the viz follow the directions here: https://gridappsd.readthedocs.io/en/latest/using_gridappsd/index.html#start-gridapps-d-platform
 
 
 
