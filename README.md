@@ -53,11 +53,14 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     
     root@1b762c641f24:/usr/src/gridappsd-restoration# cd /opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux/ ; python setup.py install
     
+    
     b. Note that the python version supported by CPLEX_Studio129 is 3.6. If you have a different version of CPLEX, it might require different version of python for interface. In such a case, make sure the application container has correct version of python installed.
     
-    c. Next, start the application terminal again to run the application from terminal
+    
+    c. Next, get back to the path where application is mounted
     
     root@1b762c641f24:/opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux# cd /usr/src/gridappsd-restoration
+    
     
     d. The following runs the application from terminal
     
