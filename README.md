@@ -74,10 +74,14 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     
      ````
      
-     
+# Visualization 
+
 To start the application through the viz follow the directions here: https://gridappsd.readthedocs.io/en/latest/using_gridappsd/index.html#start-gridapps-d-platform
 
-   
+Fault events can be added using the Test Configuration page. The added events for a simulation can be seen in the Events view. An example of the event is shown here:
+https://github.com/Jeffrey-Simpson/gridappsd-cmd/blob/master/saved_examples/test_scheduled_event_1_fault.json
+
+Note that the WSU-Restoration application gets triggered only when the fault event is added in the test case. During normal operation, application stays quite.    
 
 
 
