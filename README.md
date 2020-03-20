@@ -42,16 +42,28 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     gridappsd@f4ede7dacb7d:/gridappsd$ ./run-gridappsd.sh
     
     ````
+1.  Install cplex inside the container
+
+    ```` console
+    
+    
+    ````    
+
 1.  Run the application container
 
     ```` console
     osboxes@osboxes> cd WSU-Restoration
     osboxes@osboxes> docker exec -it gridappsddocker_wsu_res_app_1 bash
     
-    # you will now be inside the application container, the following runs the application from terminal
+    # Once you are inside the container, the following installs CPLEX to be used by the application 
+    root@1b762c641f24:/usr/src/gridappsd-restoration# cd /opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux/ ; python setup.py install
     
+    # Note that the python version supported by CPLEX_Studio129 is 3.6. If you have a different version of CPLEX, it might require different version of python for interface. In such a case, make sure the application container has correct version of python installed.
+    
+    # Now come back to the application container. The following runs the application from terminal
+    root@1b762c641f24:/opt/ibm/ILOG/CPLEX_Studio129/cplex/python/3.6/x86-64_linux# cd /usr/src/gridappsd-restoration
     root@1b762c641f24:/usr/src/gridappsd-restoration# cd Restoration
-    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py sim_id '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'
+    root@1b762c641f24:/usr/src/gridappsd-restoration/Restoration# python main.py [sim_id] '{"power_system_config":  {"Line_name":"_AAE94E4A-2465-6F5E-37B1-3E72183A4E44"}}'
 
     
     ````
