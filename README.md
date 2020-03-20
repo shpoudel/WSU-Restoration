@@ -19,10 +19,17 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
 
     ```` yaml
     wsu_res_app:
-      image: wsu-restoration-app
-      depends_on: 
-        gridappsd    
+    image: wsu-restoration-app
+    volumes:
+      - /opt/ibm/ILOG/CPLEX_Studio129/:/opt/ibm/ILOG/CPLEX_Studio129
+    environment:
+      GRIDAPPSD_URI: tcp://gridappsd:61613
+    depends_on:
+      - gridappsd   
+      
+    # Adjust the CPLEX path based on the version you have
     ````
+    
 
 1.  Run the docker application 
 
