@@ -48,8 +48,12 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
 1.  Getting the container ready
 
     ```` console
+    # Open a new terminal
+    
     osboxes@osboxes> cd WSU-Restoration
     osboxes@osboxes> docker exec -it gridappsddocker_wsu_res_app_1 bash
+    
+    # This will take you to the application container. Following steps will make the application container ready to run with all requirements
     
     a. Once you are inside the container, the following installs CPLEX to be used by the application 
     
@@ -79,7 +83,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     
      ````
      
-# Visualization 
+## Visualization 
 
 To start the application through the viz follow the directions here: https://gridappsd.readthedocs.io/en/latest/using_gridappsd/index.html#start-gridapps-d-platform
 
