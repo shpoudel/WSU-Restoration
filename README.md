@@ -42,8 +42,10 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     gridappsd@f4ede7dacb7d:/gridappsd$ ./run-gridappsd.sh
     
     ```` 
+    
+## Executing the restoration application container
 
-1.  Run the application container
+1.  Getting the container ready
 
     ```` console
     osboxes@osboxes> cd WSU-Restoration
@@ -73,7 +75,7 @@ Please clone the repository https://github.com/GRIDAPPSD/gridappsd-docker (refer
     ```` console
     # At this point, we are ready to start the platform using browser: localhost:8080/ 
     
-    # Run the platform and take the [simulation_ID] from the browser to Step 4.d for running the application in the terminal.
+    # Run the platform and take the [simulation_ID] from the browser to Step 1.d for running the application in the terminal.
     
      ````
      
