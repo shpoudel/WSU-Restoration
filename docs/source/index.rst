@@ -1,17 +1,24 @@
-.. GridAPPS-D Python documentation master file, created by
-   sphinx-quickstart on Tue Jun 19 10:14:47 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. GridAPPS-D
 
-Welcome to GridAPPS-D Python's documentation!
-=============================================
+==========================
+WSU-Restoration Application Documentation
+==========================
+
+  
+.. image:: website.PNG
+    :scale: 50 %
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-   api
-
+   overview/index
+   installing_gridappsd/index
+   setup/index
+   starting_service/index
+   data_model/index
+   visualization/index
+   license/license
+   
 Indices and tables
 ==================
 
