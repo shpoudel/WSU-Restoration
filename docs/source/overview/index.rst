@@ -10,7 +10,7 @@ This report documents the restoration application developed by Washington State 
 
 .. include:: architecture.rst
 
-.. include:: leveraging_platform.rst
+.. include:: conceptual_design_summary.rst
 
 .. include:: definitions.rst
 
