@@ -9,6 +9,6 @@ References
 .. [CIT7] \S. Poudel, A. Dubey, and A. Bose, "Probabilistic Quantification of Power Distribution System Operational Resilience," *2019 IEEE Power & Energy Society General Meeting (PESGM)*, Atlanta, GA, 2019, pp. 1-5
 .. [CIT8] \S. Poudel, M. Mukherjee and A. Dubey, "Optimal Positioning of Mobile Emergency Resources for Resilient Restoration," *2018 North American Power Symposium (NAPS)*, Fargo, ND, 2018, pp. 1-6.
 .. [CIT9] \W. H. Kersting, "Radial distribution test feeders," in *2001 IEEE Power Engineering Society Winter Meeting. Conference Proceedings (Cat. No.01CH37194)*, 2001, pp. 908-912 vol.2.
-.. [CIT10] \R. F. Arritt and R. C. Dugan, "The IEEE 8500-node test feeder," in *IEEE PES T&D 2010*, 2010, pp. 1-6.
+.. [CIT10] \R. F. Arritt and R. C. Dugan, "The IEEE 8500-node test feeder," in *IEEE PES T&D 2010*, pp. 1-6.
 
 	
