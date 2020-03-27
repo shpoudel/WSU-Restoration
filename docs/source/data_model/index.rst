@@ -7,7 +7,7 @@ Data Model
 IEEE 8500-Node Test Feeder
 --------------------------
 
-An IEEE Working Group specified a set of distribution test circuits [CIT8]_ and we have chosen the largest one of these as a sample circuit for GridAPPS-D which is IEEE 8500-Node model [CIT9]_. The original 8500-Node test feeder operates at 12.47 kV and has a peak load of about 11 MW,
+An IEEE Working Group specified a set of distribution test circuits [CIT9]_ and we have chosen the largest one of these as a sample circuit for GridAPPS-D which is IEEE 8500-Node model [CIT10]_. The original 8500-Node test feeder operates at 12.47 kV and has a peak load of about 11 MW,
 including approximately 1100 single-phase, center-tapped transformers with triplex service drops. Loads are *balanced* between the two center-tapped windings. The circuit includes 4 shunt capacitor banks and 6 voltage regulator banks, making it a reasonable test for solving voltage problems such as VVO. The circuit is splitted into three substation and several new distributed energy resources (DERs) are added in the test case (See Fig. 3). In addition, 7 tie switches are added such that each substation can share the load of another substation during fault to restore the outage customers. Finally, a new neighborhood is added near substation 2 such that peak load of the new test case is around 12 MW. 
 
 * The detailed model of this feeder can be found at: 
