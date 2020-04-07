@@ -59,8 +59,8 @@ class Topology(object):
         TOP.append(message)
 
         # Flush the memory as we only need previous topology to find out the fault location
-        if len(TOP) > 2:
-            TOP = TOP[-2:]
+        if len(TOP) > 5:
+            TOP = TOP[-5:]
         
         # print(TOP)
         # Checing if fault occured.
@@ -82,10 +82,11 @@ class Topology(object):
         for top in TOP:
             if (timestamp) == top['when']:
                 curr_open = top['op_sw']
-            if (timestamp - 3) == top['when']:
+            if (timestamp - 6) == top['when']:
                 previous = top['op_sw']
 
         op_fault  = curr_open - previous
+        # op_fault = self._faulted
 
         # print('************************')
         # print(op_fault)
