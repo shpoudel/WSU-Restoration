@@ -148,19 +148,20 @@ class SwitchingActions(object):
         if 'gridappsd-alarms' in headers['destination']:
             # message = json.loads(message.replace("\'",""))            
             for m in message:
-                self._faulted.append(m['equipment_name'])
                 print(m)
                 # Check for who made changes and trigger alarm
-                if m['created_by'] != 'system' and m['value'] == 1:
+                if m['created_by'] != 'system' and m['value'] == 'Open':
                     print('\n')
                     print('Alarm received for fault, Switch is open: ', m['equipment_name'])
                     print('\n')
                     self._alarm = 1
+                    self._faulted.append(m['equipment_name'])
                 else:
                     print('\n')
                     print('Operator action done!!')
                     print('\n')
-                    
+            self._faulted = list(dict.fromkeys(self._faulted))     
+            print(self._faulted) 
         else:
             if not message['message']['measurements']:
                 return
@@ -400,9 +401,9 @@ def _main():
     toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
     obj_msr_loadsw, obj_msr_demand, LoadData, Xfmr, LineData, DERs, Cycles, obj_msr_inv, obj_msr_sync)
     print("Now subscribing....")
-    # alarms = Alarm()   
+    # alarms = Alarm() 
+    gapps.subscribe(alarm_topic, toggler)   
     gapps.subscribe(listening_to_topic, toggler)
-    gapps.subscribe(alarm_topic, toggler) 
     while True:
         time.sleep(0.1)
 
