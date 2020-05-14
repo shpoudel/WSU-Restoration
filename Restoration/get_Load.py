@@ -12,12 +12,14 @@ class PowerData(object):
     """
     WSU Resilient Restoration, Get load data from feeder
     """
-    def __init__(self, msr_mrids_load, sim_output, xfmr, inverters, ders):
+    def __init__(self, msr_mrids_load, sim_output, xfmr, inverters, ders, sub, store):
         self.meas_load = msr_mrids_load
         self.output = sim_output
         self.xfmr = xfmr
         self.inverters = inverters
         self.ders = ders
+        self.sub = sub
+        self.store = store
         
     def demand(self):
         data1 = self.meas_load
@@ -200,5 +202,32 @@ class PowerData(object):
             print(d['line'], '\t', d['bus'], '\t', d['kW'], '\n')
         # Display output of DERs in table format
         print('**********************************************************************')
-
         return der_out
+
+
+    def Sub_Power(self):
+        data1 = self.sub
+        data2 = self.output
+        meas_value = data2['message']['measurements']     
+        timestamp = data2["message"] ["timestamp"]
+        der_out = []
+        for d1 in data1:                
+            if d1['measid'] in meas_value:
+                v = d1['measid']
+                pq = meas_value[v]
+                loadbus = d1['bus']
+                phase = d1['phases']
+                phi = (pq['angle'])*math.pi/180
+                message = dict(tim = timestamp,
+                                line = d1['eqname'],
+                                VA = [pq['magnitude'], pq['angle']],
+                                Phase = phase,
+                                kW = 0.001 * pq['magnitude']*np.cos(phi),
+                                kVaR = 0.001* pq['magnitude']*np.sin(phi))
+                der_out.append(message)   
+                self.store.append(message)
+        
+        # with open('SubPower.json', 'w') as fp:
+        #     json.dump(self.store, fp)
+
+        return self.store

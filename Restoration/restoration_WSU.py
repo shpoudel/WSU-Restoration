@@ -50,18 +50,18 @@ class Restoration:
         bigM = 15000        
         
         # Different variables for optimization function
-        si = LpVariable.dicts("s_i", ((i) for i in range(nNodes) ), lowBound=0, upBound=1, cat='Binary')
-        vi = LpVariable.dicts("v_i", ((i) for i in range(nNodes) ), lowBound=0, upBound=1, cat='Binary')
-        xij = LpVariable.dicts("x_ij", ((i) for i in range(nEdges) ), lowBound=0, upBound=1, cat='Binary')
-        Pija = LpVariable.dicts("xPa", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Pijb = LpVariable.dicts("xPb", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Pijc = LpVariable.dicts("xPc", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Qija = LpVariable.dicts("xQa", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Qijb = LpVariable.dicts("xQb", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Qijc = LpVariable.dicts("xQc", ((i) for i in range(nEdges) ), lowBound=-bigM, upBound=bigM, cat='Continous')
-        Via = LpVariable.dicts("xVa", ((i) for i in range(nNodes) ), lowBound=0.79, upBound=1.2625, cat='Continous')
-        Vib = LpVariable.dicts("xVb", ((i) for i in range(nNodes) ), lowBound=0.79, upBound=1.2625, cat='Continous')
-        Vic = LpVariable.dicts("xVc", ((i) for i in range(nNodes) ), lowBound=0.79, upBound=1.2625, cat='Continous')
+        si = LpVariable.dicts("s_i", ((i) for i in range(nNodes) ), lowBound = 0, upBound = 1, cat='Binary')
+        vi = LpVariable.dicts("v_i", ((i) for i in range(nNodes) ), lowBound = 0, upBound = 1, cat='Binary')
+        xij = LpVariable.dicts("x_ij", ((i) for i in range(nEdges) ), lowBound = 0, upBound = 1, cat='Binary')
+        Pija = LpVariable.dicts("xPa", ((i) for i in range(nEdges) ), lowBound = -bigM, upBound = bigM, cat='Continous')
+        Pijb = LpVariable.dicts("xPb", ((i) for i in range(nEdges) ), lowBound = -bigM, upBound = bigM, cat='Continous')
+        Pijc = LpVariable.dicts("xPc", ((i) for i in range(nEdges) ), lowBound = -bigM, upBound = bigM, cat='Continous')
+        Qija = LpVariable.dicts("xQa", ((i) for i in range(nEdges) ), lowBound = -bigM, upBound = bigM, cat='Continous')
+        Qijb = LpVariable.dicts("xQb", ((i) for i in range(nEdges) ), lowBound = -bigM, upBound = bigM, cat='Continous')
+        Qijc = LpVariable.dicts("xQc", ((i) for i in range(nEdges) ), lowBound = -bigM, upBound = bigM, cat='Continous')
+        Via = LpVariable.dicts("xVa", ((i) for i in range(nNodes) ), lowBound = 0.9, upBound = 1.2625, cat='Continous')
+        Vib = LpVariable.dicts("xVb", ((i) for i in range(nNodes) ), lowBound = 0.9, upBound = 1.2625, cat='Continous')
+        Vic = LpVariable.dicts("xVc", ((i) for i in range(nNodes) ), lowBound = 0.9, upBound = 1.2625, cat='Continous')
 
         # Optimization problem objective definitions
         # Maximize the power flow from feeder 

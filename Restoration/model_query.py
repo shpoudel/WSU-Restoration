@@ -77,6 +77,8 @@ class MODEL_EQ(object):
         obj_msr_sync = obj_msr_sync['data']
         der_line = ['ln5002chp-1','ln6108125-4','ln2001der-1','ln2001der-2','ln6259999-1','ln6311089-1',\
                     'ln2001der-3','ln2001der-4','ln2001der-5','ln5542283-1','ln5957500-1','ln1047pvfrm-1']
+        substation = ['ln5710794-3', 'hvmv69s1s2-9', 'hvmv69s2s3-1']
+        obj_msr_sub = [d for d in obj_msr_sync if d['type'] != 'PNV' and d['eqname'] in substation]
         obj_msr_sync = [d for d in obj_msr_sync if d['type'] != 'PNV' and d['eqname'] in der_line]
         # print(obj_msr_sync)
 
@@ -98,7 +100,7 @@ class MODEL_EQ(object):
         obj_msr_demand = self.gapps.get_response(self.topic, message, timeout=180)
 
         print('Gathering Measurement MRIDS.... \n')
-        return obj_msr_loadsw, obj_msr_demand, obj_msr_inv, obj_msr_sync
+        return obj_msr_loadsw, obj_msr_demand, obj_msr_inv, obj_msr_sync, obj_msr_sub
     
 
     def distLoad(self):
