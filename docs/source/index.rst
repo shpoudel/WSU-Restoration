@@ -20,7 +20,6 @@ Essentially, an ADMS allows for applications that can readily access information
    data_model/index
    hosted_applications/index
    api_docs/index
-   license/license
-   
+     
 .. |GridAPPS-D Logo| image:: GridAPPS-D_Logo.png
     :scale: 50 %
