@@ -15,6 +15,6 @@ CPLEX - A commercial optimization software package for solving the large-scale o
 	
 GridLAB-D - GridLAB-D is a distribution level powerflow simulator. It acts as the real world distribution system in GridAPPS-D.
 
-Power System Model - A modified IEEE 8500 model is used and is referred as IEEE 9500-node model. 
+Power System Model - A modified IEEE 8500-node feeder is used as the test case  
 
 	
