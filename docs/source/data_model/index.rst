@@ -29,7 +29,7 @@ including approximately 1100 single-phase, center-tapped transformers with tripl
 
 |model|
 
-*Figure: Modified IEEE 9800-node model.*
+*Figure: Modified IEEE 850000-node feeder.*
 
 .. |model| image:: 8500.PNG
 
