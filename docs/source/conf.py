@@ -192,7 +192,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'GridAPPS-D.tex', 'WSU-Restoration Application Documentation',
+    (master_doc, 'GridAPPS-D.tex', 'WSU-Restoration App Documentation',
      'WSU and GridAPPS-D Team', 'manual'),
 ]
 
@@ -202,7 +202,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'gridapps-d', 'WSU-Restoration Application Documentation',
+    (master_doc, 'gridapps-d', 'WSU-Restoration App Documentation',
      [author], 1)
 ]
 
@@ -213,7 +213,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'GridAPPS-D', 'WSU-Restoration Application Documentation',
+    (master_doc, 'GridAPPS-D', 'WSU-Restoration App Documentation',
      author, 'GridAPPS-D', 'One line description of project.',
      'Miscellaneous'),
 ]
