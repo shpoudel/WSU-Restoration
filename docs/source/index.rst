@@ -22,12 +22,5 @@ Essentially, an ADMS allows for applications that can readily access information
    api_docs/index
    license/license
    
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 .. |GridAPPS-D Logo| image:: GridAPPS-D_Logo.png
     :scale: 50 %
