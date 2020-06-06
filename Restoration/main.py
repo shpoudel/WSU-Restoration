@@ -388,7 +388,7 @@ def _main():
     #.....................................................................
     # Checking isolation and restoration before starting the visualization
     opsw = []
-    # fault = ['M1047507']
+    # fault = ['E206217', 'D6170302-1_INT', 'E192860']
     # for f in fault:
     #     pr = OpenSw(f, line, Cycles)
     #     op = pr.fault_isolation()
@@ -398,6 +398,15 @@ def _main():
     # res = Restoration()
     # op, cl, = res.res9500(line, LoadData, opsw, Cycles)
     # print (cl)
+    # op_sw = []
+    # cl_sw = []
+    # for l in line:
+    #     if l['index'] in op:
+    #         op_sw.append(l['line'])
+    #     if l['index'] in cl:
+    #         cl_sw.append(l['line'])
+    # print('\n Open the switches: \n', op_sw)
+    # print('\n Close the switches: \n', cl_sw)
     # .....................................................................
 
     print("Initialize..... \n")

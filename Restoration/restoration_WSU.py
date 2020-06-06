@@ -317,10 +317,14 @@ class Restoration:
         prob += Pija[2750] == 0
         prob += Pijb[2750] == 0        
 
-        # # Hospitals and City Malls Island creation.
-        # # Once Virtual switch is closed, one islanding switch should be open
-        # prob += xij[2754] + xij[179] <= 1 
-        # prob += xij[2755] + xij[955] <= 1 
+        # Hospitals and City Malls Island creation.
+        # Once Virtual switch is closed, one islanding switch should be open
+        prob += xij[2754] + xij[179] <= 1 
+        prob += xij[2755] + xij[955] <= 1 
+
+        # Also when virtual switch is closed, the DER switch should be closed which was open before 
+        prob += xij[2754] - xij[467] == 0 
+        prob += xij[2755] - xij[1098] == 0 
 
         # Capcity of DGs
         # Generator.Diesel620
@@ -362,6 +366,15 @@ class Restoration:
         for k in range(16):
             if xij[No[k]].varValue > 0.5:
                 cl.append(No[k])
+        
+        # If DG is operated (virtual switch closed), we need to close the actual DER switch in the platform
+        virt_sw  = [2754, 2755, 2756]
+        der = [467, 1098]
+        for vs in virt_sw:
+            if vs in cl:
+                ind = virt_sw.index(vs)
+                cl.append(der[ind])
+
         return op, cl
         # for k in range(len(No)):
         #     print(xij[No[k]].varValue)
