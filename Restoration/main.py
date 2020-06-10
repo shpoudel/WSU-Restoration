@@ -77,7 +77,7 @@ class SwitchingActions(object):
     message to the simulation_input_topic with the forward and reverse difference specified.
     """
 
-    def __init__(self, simulation_id, gridappsd_obj, switches, msr_mrids_loadsw, msr_mrids_demand, demand, xfmr, line, DERs, Cycles, obj_msr_inv, obj_msr_sync, obj_msr_sub):
+    def __init__(self, simulation_id, gridappsd_obj, switches, net_graph, msr_mrids_loadsw, msr_mrids_demand, demand, xfmr, line, DERs, Cycles, obj_msr_inv, obj_msr_sync, obj_msr_sub):
         """ Create a ``SwitchingActions`` object
 
         This object should be used as a subscription callback from a ``GridAPPSD``
@@ -128,6 +128,7 @@ class SwitchingActions(object):
         self.obj_msr_sub = obj_msr_sub
         self.constant = 0
         self.store = []
+        self.net_graph = net_graph
         _log.info("Building cappacitor list")
 
         
@@ -152,7 +153,7 @@ class SwitchingActions(object):
             for m in message:
                 print(m)
                 # Check for who made changes and trigger alarm
-                if m['created_by'] != 'system' and m['value'] == 'Open':
+                if m['created_by'] == 'system' and m['value'] == 'Open':
                     print('\n')
                     print('Alarm received for fault, Switch is open: ', m['equipment_name'])
                     print('\n')
@@ -198,13 +199,14 @@ class SwitchingActions(object):
                 print('Event successfully restored......')
 
             # Checking the topology everytime communicating with the platform
-            top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.LineData, self._alarm, self._faulted)
-            TOP, flag_event, LoadBreak, dispatch = top.curr_top()
-            self.TOP = TOP
+            top = Topology(self.msr_mrids_loadsw, self.switches, message, self.TOP, self.net_graph, self._alarm, self._faulted)
+            self.TOP, flag_event, LoadBreak, dispatch = top.curr_top()
+            # Operating spanning tree of the 9500 node model: Comment the line below.
+            # top.spanning_tree()
 
             # Locate fault
             if flag_event == 1:
-                flag_fault, fault = top.locate_fault(LoadBreak)
+                flag_fault, fault = top.locate_fault()
 
             # Get consumer loads from platform
             ld = PowerData(self.msr_mrids_demand, message, self.xfmr, self.obj_msr_inv, self.obj_msr_sync, self.obj_msr_sub, self.store)
@@ -315,23 +317,6 @@ class SwitchingActions(object):
                 self._Island = 0
 
 
-# class Alarm(object):
-#     """ A simple class that handles publishing forward and reverse differences
-
-#     The object should be used as a callback from a GridAPPSD object so that the
-#     on_message function will get called each time a message from the simulator.  During
-#     the execution of on_meessage the `SwitchingActions` object will publish a
-#     message to the simulation_input_topic with the forward and reverse difference specified.
-#     """
-
-#     def __init__(self):
-#        pass
-        
-#     def on_message(self, headers, message):
-#         if “gridappsd-alarms” in headers[“destination”]:
-#             print(headers)
-
-            
 def _main():
     _log.debug("Starting application")
     print("Application starting------------------------------------------------------- \n")
@@ -359,16 +344,15 @@ def _main():
     topic = "goss.gridappsd.process.request.data.powergridmodel"
 
     # Run queries to get model information
-    print('Get Model Information..... \n')   
     query = MODEL_EQ(gapps, model_mrid, topic)
     obj_msr_loadsw, obj_msr_demand, obj_msr_inv, obj_msr_sync, obj_msr_sub = query.meas_mrids()
     print('Get Object MRIDS.... \n')
     switches = query.get_switches_mrids()
     LoadData, Xfmr = query.distLoad()
     DERs = query.distributed_generators()
-
-    # print(DERs)
+    net_graph = query.connectivity_graph()
     pv_inverters = query.Inverters()
+    
     sP = 0.
     sQ = 0.
     for l in LoadData:
@@ -410,10 +394,9 @@ def _main():
     # .....................................................................
 
     print("Initialize..... \n")
-    toggler = SwitchingActions(opts.simulation_id, gapps, switches, \
+    toggler = SwitchingActions(opts.simulation_id, gapps, switches, net_graph, \
     obj_msr_loadsw, obj_msr_demand, LoadData, Xfmr, LineData, DERs, Cycles, obj_msr_inv, obj_msr_sync, obj_msr_sub)
     print("Now subscribing....")
-    # alarms = Alarm() 
     gapps.subscribe(alarm_topic, toggler)   
     gapps.subscribe(listening_to_topic, toggler)
     while True:
