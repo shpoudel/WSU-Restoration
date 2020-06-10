@@ -32,19 +32,19 @@ class OpenSw(object):
         nor_open = ['ln0653457_sw','v7173_48332_sw', 'tsw803273_sw', 'a333_48332_sw','tsw320328_sw',\
                    'a8645_48332_sw','tsw568613_sw', 'wf856_48332_sw', 'wg127_48332_sw']
 
-        G = nx.Graph()  
+        G1 = nx.Graph()  
 
         # Donot add DGs in fault isolation      
         # For isolation take a meshed network
         for l in self.LineSW:
-            G.add_edge(l['from_br'], l['to_br'])
+            G1.add_edge(l['from_br'], l['to_br'])
         
         Source = 'SOURCEBUS'
-        Fault = self.fault 
+        Fault = self.fault.upper() 
         print(" \n Now isolating the fault.... \n ")
 
         # ways stores all possible paths from source to fault location
-        ways = list(nx.all_simple_paths(G, source = Source, target = Fault))
+        ways = list(nx.all_simple_paths(G1, source = Source, target = Fault))
         s = []
         s1 = []
         ind = []

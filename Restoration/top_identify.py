@@ -9,31 +9,48 @@ import networkx as nx
 
 class Topology(object):
     """
-    WSU Resilient Restoration 
-    Identify the current topology of the test case
+    A topology process class
+    Identify the current topology of the test case and locate the fault if alarm is received
+    Also gives the spanning tree at each time step if called upon. 
     """
-    def __init__(self, msr_mrids_load, switches, sim_output, TOP, LineData, alarm, faulted):
-        self.meas_load = msr_mrids_load
+
+    def __init__(self, msr_mrids_sw, switches, sim_output, TOP, un_graph, alarm, faulted):
+        """ 
+        Parameters
+        ----------
+        msr_mrids_sw: list(dict)
+            The measurement mrids of switches for getting the real time status
+        switches: list(dict)
+            Object mrids for switches to control their status
+        TOP: list(dict)
+            A virtual memory for fault location
+        un_graph: list(dict)
+            A list containing the graph information of 9500 node model
+        alarm: (0/1)
+            A binary number indicating the fault. Relates to alarm service in main.py
+        faulted: list(dict)
+            A list of switches that are tripped by testmanager
+        """
+
+        self.msr_mrids_sw = msr_mrids_sw
         self.output = sim_output
         self.switches = switches
         self.TOP = TOP
-        self.LineData =  LineData
+        self.un_graph =  un_graph
         self._alarm =  alarm
         self._faulted = faulted     
         
     def curr_top(self):
-        data1 = self.meas_load
+        msr_mrids_sw = self.msr_mrids_sw
         data2 = self.output     
         TOP = self.TOP
-        # data2 = json.loads(data2.replace("\'",""))
         timestamp = data2["message"] ["timestamp"]
         meas_value = data2['message']['measurements']
-        data2 = data2["message"]["measurements"]
         
-        # Find interested mrids. We are only interested in Position of the switches
+        # Find interested mrids. We are only interested in Pos of the switches
         ms_id = []
         bus = []     
-        data1 = data1['data']
+        data1 = msr_mrids_sw['data']
         ds = [d for d in data1 if d['type'] == 'Pos']
 
         # Store the open switches
@@ -42,14 +59,14 @@ class Topology(object):
             if d1['measid'] in meas_value:
                 v = d1['measid']
                 p = meas_value[v]
-                # print(p)
                 if p['value'] == 0:
                     Loadbreak.append(d1['eqname'])
+
         print('.....................................................')
         print('The total number of open switches:', len(set(Loadbreak)))
         print(timestamp, set(Loadbreak))
 
-        # Is New neighborhood islanded, if yes, then dispatch the signal
+        # Is New neighborhood islanded, if yes, then dispatch the signal to support the island
         dispatch = 0
         if 'ln2000001_sw' in Loadbreak:
             dispatch = 1
@@ -62,64 +79,82 @@ class Topology(object):
         if len(TOP) > 5:
             TOP = TOP[-5:]
         
-        # print(TOP)
-        # Checing if fault occured.
-        # Replace this with alarm signal
+        # Checing if there is alarm and then raise the flag for event
         flag_event = 0
         if self._alarm == 1:
             flag_event = 1
         return TOP, flag_event, Loadbreak, dispatch
 
-    def locate_fault(self, LoadBreak):
+    def locate_fault(self):
         
         G = nx.Graph()
         TOP = self.TOP
-        data2 = self.output
-        LineData =  self.LineData
-        # data2 = json.loads(data2.replace("\'",""))
-        timestamp = data2["message"] ["timestamp"]
-        # Check with previous topology:
+        meas_value = self.output
+        timestamp = meas_value["message"] ["timestamp"]
+
+        # Check with previous topology to find what switch was tripped because of fault:
         for top in TOP:
             if (timestamp) == top['when']:
                 curr_open = top['op_sw']
             if (timestamp - 6) == top['when']:
                 previous = top['op_sw']
-
         op_fault  = curr_open - previous
-        # op_fault = self._faulted
+
         # Removing the isolating for DER switch as they are opened for complaince with IEEE 1547 standard
-
         der_sw = ['ln5001chp_sw', 'ln1047pvfrm_sw', 'dg1089dies_sw','dg1089lng_sw', 'dg1142lng_sw', 'dg1209dies_sw']
-
         op_fault = [trip for trip in op_fault if trip not in der_sw]
-
-        # print('************************')
-        # print(op_fault)
-        # print(previous)
-        # print('************************')
         
-        DGS = ['dgv1','dgv2','dgv3', 'dgv4','dgv5', 'dgv6','dgv7']
-        # Here I know what switches are open but need to locate fault in more generalized way..
-        for l in LineData:
-            if l['line'] not in previous and l['line'] not in DGS:
-                G.add_edge(l['from_br'], l['to_br'])
-        T = list(nx.bfs_tree(G, source = 'SOURCEBUS').edges())
+        # Here we know what switches are tripped but need to locate fault in more generalized way
+        for l in self.un_graph:
+            if l['name'] not in previous:
+                G.add_edge(l['bus1'], l['bus2'])
+        T = list(nx.bfs_tree(G, source = 'sourcebus').edges())
 
         # Finding Fault node to be used in isolation
         fault = []
         flag_fault = 0
-        for l in LineData:
-            if l['line'] in op_fault:
-                op = [l['from_br'], l['to_br']]
+        for l in self.un_graph:
+            if l['name'] in op_fault:
+                op = [l['bus1'], l['bus2']]
                 op = set(op)
                 for t in T:
                     if set(t) == op:
                         fault.append(t[1])
                         flag_fault = 1
-        # print (fault)
-        print(fault)
         return flag_fault, fault
-        # Check for fault if topology changes and alarm is received:
+    
+    def spanning_tree(self):
+
+        G = nx.Graph()
+        msr_mrids_sw = self.msr_mrids_sw
+        sim_output = self.output     
+        timestamp = sim_output["message"] ["timestamp"]
+        meas_value = sim_output['message']['measurements']
+        
+        # Find interested mrids. We are only interested in Pos of the switches
+        ms_id = []
+        bus = []     
+        data1 = msr_mrids_sw['data']
+        ds = [d for d in data1 if d['type'] == 'Pos']
+
+        # Store the open switches
+        Loadbreak = []
+        for d1 in ds:                
+            if d1['measid'] in meas_value:
+                v = d1['measid']
+                p = meas_value[v]
+                if p['value'] == 0:
+                    Loadbreak.append(d1['eqname'])
+        
+        for l in self.un_graph:
+            if l['name'] not in Loadbreak:
+                G.add_edge(l['bus1'], l['bus2'])
+        T = list(nx.bfs_tree(G, source = 'sourcebus').edges())
+        print("\n Number of Nodes:", G.number_of_nodes(), "\n", "Number of Edges:", G.number_of_edges())
+        print('\n The number of edges in a Spanning tree is:', len(T))
+
+
+        
 
 
 

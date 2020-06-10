@@ -356,8 +356,7 @@ class Restoration:
         for k in range(7):
             print('DG',DG[k],':', Pija[DG[k]].varValue, Pijb[DG[k]].varValue, Pijc[DG[k]].varValue)
         print ('........................')
-        # print(' Tie Switch Flow:', Pija[2750].varValue, Pijb[2750].varValue, Pijc[2750].varValue )
-        
+                
         op = []
         cl = []
         for k in range(nEdges):

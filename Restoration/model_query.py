@@ -7,7 +7,7 @@ Created on Wed Oct 23 11:17:12 2019
 
 class MODEL_EQ(object):
     """
-    WSU Resilient Restoration. Mapping Switch MRIDs
+    WSU Resilient Restoration. Running several queries and responses
     """
     def __init__(self, gapps, model_mrid, topic):
         self.gapps = gapps
@@ -80,7 +80,6 @@ class MODEL_EQ(object):
         substation = ['ln5710794-3', 'hvmv69s1s2-9', 'hvmv69s2s3-1']
         obj_msr_sub = [d for d in obj_msr_sync if d['type'] != 'PNV' and d['eqname'] in substation]
         obj_msr_sync = [d for d in obj_msr_sync if d['type'] != 'PNV' and d['eqname'] in der_line]
-        # print(obj_msr_sync)
 
          # Get measurement MRIDS for Inverters
         message = {
@@ -89,7 +88,6 @@ class MODEL_EQ(object):
         "resultFormat": "JSON",
         "objectType": "PowerElectronicsConnection"}     
         obj_msr_inv = self.gapps.get_response(self.topic, message, timeout=180)   
-        # print(obj_msr_inv)
 
         # Get measurement MRIDS for kW consumptions at each node
         message = {
@@ -98,7 +96,7 @@ class MODEL_EQ(object):
             "resultFormat": "JSON",
             "objectType": "EnergyConsumer"}     
         obj_msr_demand = self.gapps.get_response(self.topic, message, timeout=180)
-
+        print('....................................................')
         print('Gathering Measurement MRIDS.... \n')
         return obj_msr_loadsw, obj_msr_demand, obj_msr_inv, obj_msr_sync, obj_msr_sub
     
@@ -152,14 +150,6 @@ class MODEL_EQ(object):
                         kVaR = 0.001 * float(ld['q']['value']))
             LoadData.append(message)   
         print('Load..')
-        # sP = 0.
-        # sQ = 0.
-        # for l in LoadData:
-        #     sP += 0.001 * float(l['kW'])
-        #     sQ += 0.001 * float(l['kVAR'])
-
-        # print(sP, sQ)
-
 
         query = """
     PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -213,6 +203,7 @@ class MODEL_EQ(object):
                             bus2 = b['bus']['value'])
             Xfmr.append(message)   
         print('Xfm.. \n')
+
         # Now transferring load into primary using XFMR connectivity
         for ld in LoadData:
             node = ld['bus'].strip('s')
@@ -222,16 +213,6 @@ class MODEL_EQ(object):
                 if sec == node:
                     # Transfer this load to primary and change the node name
                     ld['bus'] = tr['bus1'].upper()
-
-        # sP = 0.
-        # sQ = 0.
-        # for l in LoadData:
-        #     sP += 0.001 * float(l['kW'])
-        #     sQ += 0.001 * float(l['kVAR'])       
-        
-        # print(LoadData)
-        # print(sP, sQ)
-        # # print (Xfmr)
         return LoadData, Xfmr
 
 
@@ -318,10 +299,6 @@ class MODEL_EQ(object):
                 if i['mrid'] == mrid:
                     i['measid'].append(im['meas_mrid']['value'])
 
-        # print(Inv)
-        print('Inverter..')
-
-
     def distributed_generators(self):
         query = """
         # SynchronousMachine - DistSyncMachine
@@ -405,9 +382,198 @@ class MODEL_EQ(object):
                            bus = d['bus']['value'],
                            ratedS = 0.001 * float(d['ratedS']['value']))
             DERs.append(message)  
-
         return DERs
-        
+
+    def connectivity_graph(self):
+        net_graph = []
+        print('....................................................\n')
+        print('Different components modeled as the edge of a Graph:')
+        query = """
+    PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX c:  <http://iec.ch/TC57/CIM100#>
+    SELECT ?pname ?tname ?xfmrcode ?vgrp ?enum ?bus ?basev ?phs ?grounded ?rground ?xground ?fdrid WHERE {
+    ?p r:type c:PowerTransformer.
+    # feeder selection options - if all commented out, query matches all feeders
+    #VALUES ?fdrid {"_C1C3E687-6FFD-C753-582B-632A27E28507"}  # 123 bus
+    #VALUES ?fdrid {"_49AD8E07-3BF9-A4E2-CB8F-C3722F837B62"}  # 13 bus
+    #VALUES ?fdrid {"_5B816B93-7A5F-B64C-8460-47C17D6E4B0F"}  # 13 bus assets
+    #VALUES ?fdrid {"_4F76A5F9-271D-9EB8-5E31-AA362D86F2C3"}  # 8500 node
+    #VALUES ?fdrid {"_67AB291F-DCCD-31B7-B499-338206B9828F"}  # J1
+    #VALUES ?fdrid {"_9CE150A8-8CC5-A0F9-B67E-BBD8C79D3095"}  # R2 12.47 3
+    #VALUES ?fdrid {"_E407CBB6-8C8D-9BC9-589C-AB83FBF0826D"}  # 123 PV/Triplex
+    VALUES ?fdrid {"%s"}  # 9500 node
+    ?p c:Equipment.EquipmentContainer ?fdr.
+    ?fdr c:IdentifiedObject.mRID ?fdrid.
+    ?p c:IdentifiedObject.name ?pname.
+    ?p c:PowerTransformer.vectorGroup ?vgrp.
+    ?t c:TransformerTank.PowerTransformer ?p.
+    ?t c:IdentifiedObject.name ?tname.
+    ?asset c:Asset.PowerSystemResources ?t.
+    ?asset c:Asset.AssetInfo ?inf.
+    ?inf c:IdentifiedObject.name ?xfmrcode.
+    ?end c:TransformerTankEnd.TransformerTank ?t.
+    ?end c:TransformerTankEnd.phases ?phsraw.
+    bind(strafter(str(?phsraw),"PhaseCode.") as ?phs)
+    ?end c:TransformerEnd.endNumber ?enum.
+    ?end c:TransformerEnd.grounded ?grounded.
+    OPTIONAL {?end c:TransformerEnd.rground ?rground.}
+    OPTIONAL {?end c:TransformerEnd.xground ?xground.}
+    ?end c:TransformerEnd.Terminal ?trm.
+    ?trm c:Terminal.ConnectivityNode ?cn. 
+    ?cn c:IdentifiedObject.name ?bus.
+    ?end c:TransformerEnd.BaseVoltage ?bv.
+    ?bv c:BaseVoltage.nominalVoltage ?basev
+    }
+    ORDER BY ?pname ?tname ?enum
+        """ % self.model_mrid
+        results = self.gapps.query_data(query, timeout=60)
+        results_obj = results['data']
+        SXfmr = []
+        trans = results_obj['results']['bindings']
+        service_xfm = [tr for tr in trans if tr['vgrp']['value'] != 'Ii']
+        for i, t in enumerate(service_xfm):
+            if i % 3 == 0:
+                trn = service_xfm[i]
+                b = service_xfm[i+1]
+                message = dict(name = trn['pname']['value'],
+                            bus1 = trn['bus']['value'],
+                            bus2 = b['bus']['value'])
+                SXfmr.append(message) 
+                net_graph.append(message)
+
+        Regulator = []
+        reg = [tr for tr in trans if tr['vgrp']['value'] == 'Ii']
+        for i, t in enumerate(reg):
+            if i % 6 == 0:
+                trn = reg[i]
+                b = reg[i+1]
+                message = dict(name = trn['pname']['value'],
+                            bus1 = trn['bus']['value'],
+                            bus2 = b['bus']['value'])
+                Regulator.append(message) 
+                net_graph.append(message)
+        print('Service Transformer:', len(SXfmr))  
+        print('Regulator:', len(Regulator))      
+        query = """
+    PREFIX r: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX c: <http://iec.ch/TC57/CIM100#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?name ?wnum ?bus ?eqid ?trmid WHERE { 
+    VALUES ?fdrid {"%s"}
+    ?s c:Equipment.EquipmentContainer ?fdr.
+    ?fdr c:IdentifiedObject.mRID ?fdrid. 
+    ?s r:type c:PowerTransformer.
+    ?s c:IdentifiedObject.name ?name.
+    ?s c:IdentifiedObject.mRID ?eqid.
+    ?end c:PowerTransformerEnd.PowerTransformer ?s.
+    ?end c:TransformerEnd.Terminal ?trm.
+    ?end c:TransformerEnd.endNumber ?wnum.
+    ?trm c:IdentifiedObject.mRID ?trmid. 
+    ?trm c:Terminal.ConnectivityNode ?cn. 
+    ?cn c:IdentifiedObject.name ?bus.
+    }
+    ORDER BY ?name ?wnum
+        """ % self.model_mrid 
+        results = self.gapps.query_data(query, timeout=60)
+        results_obj = results['data']
+        Power_Xfmr = []
+        trans = results_obj['results']['bindings']
+        for i, t in enumerate(trans):
+            if i % 2 == 0:
+                trn = trans[i]
+                b = trans[i+1]
+                message = dict(name = trn['name']['value'],
+                            bus1 = trn['bus']['value'],
+                            bus2 = b['bus']['value'])
+                Power_Xfmr.append(message) 
+                net_graph.append(message)
+        print('Power Transformers:', len(Power_Xfmr))
+        query = """
+    PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX c:  <http://iec.ch/TC57/CIM100#>
+    SELECT ?cimtype ?name ?bus1 ?bus2 ?id WHERE {
+    SELECT ?cimtype ?name ?bus1 ?bus2 ?phs ?id WHERE {
+    VALUES ?fdrid {"%s"}  # 9500 node
+    VALUES ?cimraw {c:LoadBreakSwitch c:Recloser c:Breaker}
+    ?fdr c:IdentifiedObject.mRID ?fdrid.
+    ?s r:type ?cimraw.
+    bind(strafter(str(?cimraw),"#") as ?cimtype)
+    ?s c:Equipment.EquipmentContainer ?fdr.
+    ?s c:IdentifiedObject.name ?name.
+    ?s c:IdentifiedObject.mRID ?id.
+    ?t1 c:Terminal.ConductingEquipment ?s.
+    ?t1 c:ACDCTerminal.sequenceNumber "1".
+    ?t1 c:Terminal.ConnectivityNode ?cn1. 
+    ?cn1 c:IdentifiedObject.name ?bus1.
+    ?t2 c:Terminal.ConductingEquipment ?s.
+    ?t2 c:ACDCTerminal.sequenceNumber "2".
+    ?t2 c:Terminal.ConnectivityNode ?cn2. 
+    ?cn2 c:IdentifiedObject.name ?bus2
+        OPTIONAL {?swp c:SwitchPhase.Switch ?s.
+        ?swp c:SwitchPhase.phaseSide1 ?phsraw.
+        bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs) }
+    } ORDER BY ?name ?phs
+    }
+    GROUP BY ?cimtype ?name ?bus1 ?bus2 ?id
+    ORDER BY ?cimtype ?name
+        """ % self.model_mrid
+        results = self.gapps.query_data(query, timeout=60)
+        results_obj = results['data']
+        switches = []
+        for p in results_obj['results']['bindings']:
+            sw_mrid = p['id']['value']
+            fr_to = [p['bus1']['value'].upper(), p['bus2']['value'].upper()]
+            message = dict(name = p['name']['value'],
+                        mrid = sw_mrid,
+                        bus1 = p['bus1']['value'],
+                        bus2 = p['bus2']['value'],
+                        sw_con = fr_to)
+            switches.append(message) 
+            net_graph.append(message)
+        print('Switches:', len(switches))
+        query = """
+    PREFIX r:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX c:  <http://iec.ch/TC57/CIM100#>
+    SELECT ?name ?bus1 ?bus2 ?id (group_concat(distinct ?phs;separator="") as ?phases) WHERE {
+    SELECT ?name ?bus1 ?bus2 ?phs ?id WHERE {
+    VALUES ?fdrid {"%s"}  # 13 bus
+    ?fdr c:IdentifiedObject.mRID ?fdrid.
+    ?s r:type c:ACLineSegment.
+    ?s c:Equipment.EquipmentContainer ?fdr.
+    ?s c:IdentifiedObject.name ?name.
+    ?s c:IdentifiedObject.mRID ?id.
+    ?t1 c:Terminal.ConductingEquipment ?s.
+    ?t1 c:ACDCTerminal.sequenceNumber "1".
+    ?t1 c:Terminal.ConnectivityNode ?cn1. 
+    ?cn1 c:IdentifiedObject.name ?bus1.
+    ?t2 c:Terminal.ConductingEquipment ?s.
+    ?t2 c:ACDCTerminal.sequenceNumber "2".
+    ?t2 c:Terminal.ConnectivityNode ?cn2. 
+    ?cn2 c:IdentifiedObject.name ?bus2
+        OPTIONAL {?acp c:ACLineSegmentPhase.ACLineSegment ?s.
+        ?acp c:ACLineSegmentPhase.phase ?phsraw.
+        bind(strafter(str(?phsraw),"SinglePhaseKind.") as ?phs) }
+    } ORDER BY ?name ?phs
+    }
+    GROUP BY ?name ?bus1 ?bus2 ?id
+    ORDER BY ?name
+        """ % self.model_mrid
+        results = self.gapps.query_data(query, timeout=60)
+        results_obj = results['data']
+        ACLine = []
+        for p in results_obj['results']['bindings']:
+            message = dict(name = p['name']['value'],
+                        bus1 = p['bus1']['value'],
+                        bus2 = p['bus2']['value'])
+            ACLine.append(message)
+            net_graph.append(message)
+        print('AC Line Segment:', len(ACLine))
+        print('....................................................\n')
+        return net_graph
+    
+    
+
+                
     def linepar(self, Linepar):
 
         # Checking Linepar and forming R and X matrix to be 9 by 9 always. Especially the capacitor control element
