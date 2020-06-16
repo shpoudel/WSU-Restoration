@@ -14,7 +14,7 @@ Download the application
 Creating the application container
 ------------------------------------------
 
-* From the command line execute the following commands to build the wsu-restoration container
+* From the command line execute the following commands to build the wsu-restoration container. Note the dot at end of command
 
 .. code-block:: bash
 
@@ -26,7 +26,7 @@ Creating the application container
 Mount the application
 -----------------------------------
 
-* Add following to the docker-compose.yml file. 
+* Add following to the docker-compose.yml file if CPLEX is available 
 
 .. code-block:: bash
 
@@ -34,6 +34,19 @@ Mount the application
     image: wsu-restoration-app
     volumes:
       - /opt/ibm/ILOG/CPLEX_Studio129/:/opt/ibm/ILOG/CPLEX_Studio129
+    environment:
+      GRIDAPPSD_URI: tcp://gridappsd:61613
+    depends_on:
+      - gridappsd 
+      
+..
+
+* Add following to the docker-compose.yml file if CPLEX is not available
+
+.. code-block:: bash
+
+    wsu_res_app:
+    image: wsu-restoration-app
     environment:
       GRIDAPPSD_URI: tcp://gridappsd:61613
     depends_on:
