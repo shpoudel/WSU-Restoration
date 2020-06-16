@@ -14,7 +14,7 @@ Download the application
 Creating the application container
 ------------------------------------------
 
-* From the command line execute the following commands to build the wsu-restoration container. Note the dot at end of command
+* From the command line execute the following commands to build the wsu-restoration container. Note that there is a dot at end of command.
 
 .. code-block:: bash
 
@@ -41,7 +41,7 @@ Mount the application
       
 ..
 
-* Add following to the docker-compose.yml file if CPLEX is not available
+* Add following to the docker-compose.yml file if CPLEX is not available. In addition, replace prob.solve(CPLEX(msg=1)) with prob.solve() in restoration_WSU.py
 
 .. code-block:: bash
 
