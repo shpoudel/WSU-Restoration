@@ -50,12 +50,15 @@ import json
 import logging
 import sys
 import time
+import os
+
 from top_identify import Topology
 from get_Load import PowerData
 from restoration_WSU import Restoration
 from mrid_map import SW_MRID
 from Isolation import OpenSw
 from model_query import MODEL_EQ
+from datetime import datetime, timezone
 
 
 from gridappsd import GridAPPSD, DifferenceBuilder, utils, GOSS, topics
@@ -129,7 +132,46 @@ class SwitchingActions(object):
         self.constant = 0
         self.store = []
         self.net_graph = net_graph
+        self.simulation_id = simulation_id
+        self._send_simulation_status('STARTED', 'Initializing RR app for ' + str(self.simulation_id), 'INFO')
         _log.info("Building cappacitor list")
+
+    def _send_simulation_status(self, status, message, log_level):
+        """send a status message to the GridAPPS-D log manager
+        Function arguments:
+            status -- Type: string. Description: The status of the simulation.
+                Default: 'localhost'.
+            stomp_port -- Type: string. Description: The port for Stomp
+            protocol for the GOSS server. It must not be an empty string.
+                Default: '61613'.
+            username -- Type: string. Description: User name for GOSS connection.
+            password -- Type: string. Description: Password for GOSS connection.
+        Function returns:
+            None.
+        Function exceptions:
+            RuntimeError()
+        """
+        simulation_status_topic = "/topic/goss.gridappsd.simulation.log.{}".format(self.simulation_id)
+
+        valid_status = ['STARTING', 'STARTED', 'RUNNING', 'ERROR', 'CLOSED', 'COMPLETE']
+        valid_level = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL']
+        if status in valid_status:
+            if log_level not in valid_level:
+                log_level = 'INFO'
+            t_now = datetime.utcnow()
+            status_message = {
+                "source": os.path.basename(__file__),
+                "processId": str(self.simulation_id),
+                "timestamp": int(time.mktime(t_now.timetuple())),
+                "processStatus": status,
+                "logMessage": str(message),
+                "logLevel": log_level,
+                "storeToDb": False
+            }
+            status_str = json.dumps(status_message)
+            _log.info("{}\n\n".format(status_str))
+            # debugFile.write("{}\n\n".format(status_str))
+            self._gapps.send(simulation_status_topic, status_str)
 
         
     def on_message(self, headers, message):
@@ -147,18 +189,19 @@ class SwitchingActions(object):
         """
         if type(message) == str:
             message = json.loads(message)
-
+        self._send_simulation_status('STARTED', "Rec message " + str(message)[:100], 'INFO')
         if 'gridappsd-alarms' in headers['destination']:
             # message = json.loads(message.replace("\'",""))            
             for m in message:
                 print(m)
                 # Check for who made changes and trigger alarm
-                if m['created_by'] == 'system' and m['value'] == 'Open':
+                if m['created_by'] != 'system' and m['value'] == 'Open':
                     print('\n')
                     print('Alarm received for fault, Switch is open: ', m['equipment_name'])
                     print('\n')
                     self._alarm = 1
                     self._faulted.append(m['equipment_name'])
+                    self._send_simulation_status('STARTED', "Rec message " + str(message)[:100], 'WARN')
                 else:
                     print('\n')
                     print('Operator action done!!')
@@ -331,6 +374,7 @@ def _main():
                         default=DEFAULT_MESSAGE_PERIOD)
     opts = parser.parse_args()
     listening_to_topic = simulation_output_topic(opts.simulation_id)
+    log_topic = simulation_log_topic(opts.simulation_id)
     alarm_topic = topics.service_output_topic('gridappsd-alarms',opts.simulation_id)
     print(alarm_topic)
     message_period = int(opts.message_period)

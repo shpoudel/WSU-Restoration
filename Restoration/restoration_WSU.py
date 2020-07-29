@@ -367,7 +367,7 @@ class Restoration:
                 cl.append(No[k])
         
         # If DG is operated (virtual switch closed), we need to close the actual DER switch in the platform
-        virt_sw  = [2754, 2755, 2756]
+        virt_sw  = [2754, 2755]
         der = [467, 1098]
         for vs in virt_sw:
             if vs in cl:
