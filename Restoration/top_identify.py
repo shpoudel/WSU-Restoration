@@ -101,7 +101,7 @@ class Topology(object):
         op_fault  = curr_open - previous
 
         # Removing the isolating for DER switch as they are opened for complaince with IEEE 1547 standard
-        der_sw = ['ln5001chp_sw', 'ln1047pvfrm_sw', 'dg1089dies_sw','dg1089lng_sw', 'dg1142lng_sw', 'dg1209dies_sw']
+        der_sw = ['ln5001chp_sw', 'ln1047pvfrm_sw', 'dg1089dies_sw','dg1089lng_sw', 'dg1142lng_sw', 'dg1209dies_sw', 'dg1069mt1_sw']
         op_fault = [trip for trip in op_fault if trip not in der_sw]
         
         # Here we know what switches are tripped but need to locate fault in more generalized way
